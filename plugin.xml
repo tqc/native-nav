@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:rim="http://www.blackberry.com/ns/widgets"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    id="com.orangeguava.nativenav"
+    version="0.0.1">
+    <name>NativeNav</name>
+    <description>NativeNav Plugin</description>
+    <license>MIT</license>
+    <keywords>cordova,ios,native,uinavigationbar</keywords>
+
+	<engines>
+		<engine name="cordova" version=">=3.2.0" />
+	</engines>
+
+    <js-module src="www/native-nav.js" name="native-nav">
+    	<clobbers target="window.NativeNav" />
+    </js-module>
+
+    <!-- ios -->
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="NativeNav">
+                <param name="ios-package" value="NativeNav" onload="true" />
+            </feature>
+        </config-file>
+
+        <header-file src="src/ios/NativeNav.h" />
+        <source-file src="src/ios/NativeNav.m" />
+    </platform>
+
+</plugin>
