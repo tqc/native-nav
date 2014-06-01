@@ -156,7 +156,13 @@ NSString* navbarTitle;
     if (button.tag < [navbarRightButtons count]) {
         NSDictionary* bdef = navbarRightButtons[button.tag];
         if (bdef[@"action"]) {
-            [self.commandDelegate evalJs:[NSString stringWithFormat:@"NativeNav.handleAction(\"%@\", \"%@\");", navbarRoute, bdef[@"action"]]];
+            NSString* escapedAction = [[bdef[@"action"]
+                    stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
+                    stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""];
+
+            NSString* script =[NSString stringWithFormat:@"NativeNav.handleAction(\"%@\", \"%@\");", navbarRoute, escapedAction];
+            NSLog(script);
+        [self.commandDelegate evalJs:script];
             NSLog(@"Clicked navbar button");
         }
         else if (bdef[@"items"]) {
@@ -179,8 +185,6 @@ NSString* navbarTitle;
             actionSheet.cancelButtonIndex = [actionSheetItems count];
   */
             [actionSheet showFromBarButtonItem:button animated:YES];
-                    
-            
         }
     }
     
@@ -284,7 +288,17 @@ NSString* navbarTitle;
     if (navbarRightButtons) {
         for (int i = 0; i < navbarRightButtons.count; i++) {
             NSDictionary*  bdef = navbarRightButtons[i];
-            UIBarButtonItem *button = [[UIBarButtonItem alloc] initWithTitle:bdef[@"title"] style:UIBarButtonItemStylePlain target:self action:@selector(clickedRightNavbarButton:)];
+            NSString* buttonTitle = bdef[@"title"];
+            UIBarButtonItem *button;
+            if ([buttonTitle isEqualToString:@"Add"]) {
+                button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(clickedRightNavbarButton:)];
+                
+            } else if ([buttonTitle isEqualToString:@"Edit"]) {
+                    button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemEdit target:self action:@selector(clickedRightNavbarButton:)];
+                    
+                } else {
+                button = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStylePlain target:self action:@selector(clickedRightNavbarButton:)];
+            }
             button.tag = i;
             [buttons addObject: button];
             //        [actionSheet addButtonWithTitle:[actionSheetItems[i] objectForKey:@"title"]];
@@ -511,5 +525,109 @@ UIBarButtonItem* flexspace;
     
 
 }
+
+/* Transitions */
+
+
+UIImageView* imageView1;
+UIImageView* imageView2;
+
+- (void) startNativeTransition:(CDVInvokedUrlCommand*)command
+{
+    NSString* transitionType =[command.arguments objectAtIndex:0];
+    UIView* capturedView;
+    
+    if ([transitionType isEqualToString:@"popup"]) {
+        capturedView =self.webView.superview;
+    }
+    else {
+        capturedView = self.webView;
+    }
+    
+    
+    UIGraphicsBeginImageContextWithOptions(capturedView.frame.size, YES, 0.0f);
+    [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    if (!imageView1) {
+        imageView1 = [[UIImageView alloc] initWithFrame:self.webView.frame];
+        [self.webView.superview addSubview:imageView1];
+        imageView1.alpha = 0.0f;
+    }
+    if (!imageView2) {
+        imageView2 = [[UIImageView alloc] initWithFrame:self.webView.frame];
+        [self.webView.superview addSubview:imageView2];
+        imageView2.alpha = 0.0f;
+    }
+    
+    self.webView.superview.backgroundColor = [UIColor blackColor];
+
+    
+    if ([transitionType isEqualToString:@"popup"]) {
+
+        [imageView1 setFrame:self.webView.frame];
+        [imageView1 setImage: viewImage];
+
+        imageView1.alpha = 1.0f;
+        self.webView.alpha = 1.0f;
+        [self.webView.superview bringSubviewToFront:self.webView];
+
+        if (navBar) {
+            navBar.alpha = 0.0f;
+        }
+
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        if(CDV_IsIPad()) {
+        self.webView.frame = CGRectMake(0,0,500.0f,500.0f);
+        self.webView.center = self.webView.superview.center;
+        }
+        self.webView.transform = CGAffineTransformMakeTranslation(0.0f, 1024);
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.5f];
+        self.webView.transform = CGAffineTransformIdentity;
+        self.webView.alpha = 1.0f;
+        imageView1.alpha = 0.5f;
+        
+        [UIView commitAnimations];
+
+    }
+    else if ([transitionType isEqualToString:@"closepopup"]) {
+        NSLog(@"%f", self.webView.frame.origin.y);
+        imageView2.transform = CGAffineTransformMakeTranslation(0.0f, 0.0f);
+        [imageView2 setFrame:self.webView.frame];
+        [imageView2 setImage: viewImage];
+
+        imageView2.alpha = 1.0f;
+        [self.webView.superview bringSubviewToFront:imageView2];
+        self.webView.alpha = 1.0f;
+        [self.webView.superview sendSubviewToBack:self.webView];
+        self.webView.frame = self.webView.superview.frame;
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.5f];
+        
+        imageView2.transform = CGAffineTransformMakeTranslation(0.0f, 1024);
+        
+        if (navBar) {
+            navBar.alpha = 1.0f;
+        }
+
+        
+        imageView2.alpha = 1.0f;
+        imageView1.alpha = 0.0f;
+        
+        [UIView commitAnimations];
+    }
+    
+    
+    
+}
+
 
 @end
