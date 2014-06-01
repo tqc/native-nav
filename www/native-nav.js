@@ -26,6 +26,12 @@
             console.log("Got message from native nav: " + route + " => " + action);
         };
 
+
+        nn.startNativeTransition = function(transitionType, callback) {
+            exec(callback, null, "NativeNav", "startNativeTransition", [transitionType]);
+        };
+
+
         nn.setKeyboardAccessory = function(buttons) {
             exec(null, null, "NativeNav", "setKeyboardAccessory", [buttons]);
         };
