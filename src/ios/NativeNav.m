@@ -294,9 +294,9 @@ NSString* navbarTitle;
                 button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(clickedRightNavbarButton:)];
                 
             } else if ([buttonTitle isEqualToString:@"Edit"]) {
-                    button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemEdit target:self action:@selector(clickedRightNavbarButton:)];
-                    
-                } else {
+                button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemEdit target:self action:@selector(clickedRightNavbarButton:)];
+                
+            } else {
                 button = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStylePlain target:self action:@selector(clickedRightNavbarButton:)];
             }
             button.tag = i;
@@ -561,10 +561,14 @@ UIImageView* imageView2;
         imageView2.alpha = 0.0f;
     }
     
-    self.webView.superview.backgroundColor = [UIColor blackColor];
 
     
     if ([transitionType isEqualToString:@"popup"]) {
+        self.webView.superview.backgroundColor = [UIColor blackColor];
+   
+        self.webView.backgroundColor = [UIColor blackColor]; // [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
+        self.webView.scrollView.backgroundColor = [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
+
 
         [imageView1 setFrame:self.webView.frame];
         [imageView1 setImage: viewImage];
@@ -580,14 +584,14 @@ UIImageView* imageView2;
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
         if(CDV_IsIPad()) {
-        self.webView.frame = CGRectMake(0,0,500.0f,500.0f);
+        self.webView.frame = CGRectMake(0,0,600.0f,600.0f);
         self.webView.center = self.webView.superview.center;
         }
         self.webView.transform = CGAffineTransformMakeTranslation(0.0f, 1024);
         
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.5f];
-        self.webView.transform = CGAffineTransformIdentity;
+        self.webView.transform =  CGAffineTransformMakeTranslation(0.0f, -50.0f);
         self.webView.alpha = 1.0f;
         imageView1.alpha = 0.5f;
         
@@ -596,7 +600,7 @@ UIImageView* imageView2;
     }
     else if ([transitionType isEqualToString:@"closepopup"]) {
         NSLog(@"%f", self.webView.frame.origin.y);
-        imageView2.transform = CGAffineTransformMakeTranslation(0.0f, 0.0f);
+        imageView2.transform = CGAffineTransformMakeTranslation(0.0f, -50.0f);
         [imageView2 setFrame:self.webView.frame];
         [imageView2 setImage: viewImage];
 
@@ -624,7 +628,30 @@ UIImageView* imageView2;
         
         [UIView commitAnimations];
     }
-    
+    else if ([transitionType isEqualToString:@"crossfade"]) {
+        self.webView.superview.backgroundColor = [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
+
+        [imageView1 setFrame:self.webView.frame];
+        [imageView1 setImage: viewImage];
+        
+        imageView1.alpha = 1.0f;
+        self.webView.alpha = 0.0f;
+        [self.webView.superview sendSubviewToBack:imageView1];
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.5f];
+        self.webView.alpha = 1.0f;
+        imageView1.alpha = 0.0f;
+        [UIView commitAnimations];
+        
+    }
+    else {
+        // invalid transition - don't do anything
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+
+    }
     
     
 }
