@@ -252,8 +252,10 @@ NSString* navbarTitle;
     [actionSheet showFromRect:CGRectMake(x, y, w, h) inView:[self webView] animated:NO];
    */
     if (!navBar) {
-    navBar = [[UINavigationBar alloc] initWithFrame:CGRectMake(0, 0, self.viewController.view.frame.size.width, 64.0)];
-       // navBar.tintColor=[UIColor blueColor];
+    navBar = [[UINavigationBar alloc] initWithFrame:CGRectMake(0, 0, self.viewController.view.bounds.size.width, 64.0)];
+       navBar.autoresizingMask = (UIViewAutoresizingFlexibleWidth);
+
+        // navBar.tintColor=[UIColor blueColor];
         [navBar setTranslucent:YES];
         [self.viewController.view addSubview:navBar];
 
@@ -545,18 +547,21 @@ UIImageView* imageView2;
     }
     
     
-    UIGraphicsBeginImageContextWithOptions(capturedView.frame.size, YES, 0.0f);
+    UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
     [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
     UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     
     if (!imageView1) {
         imageView1 = [[UIImageView alloc] initWithFrame:self.webView.frame];
+        imageView1.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+        
         [self.webView.superview addSubview:imageView1];
         imageView1.alpha = 0.0f;
     }
     if (!imageView2) {
         imageView2 = [[UIImageView alloc] initWithFrame:self.webView.frame];
+        imageView2.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
         [self.webView.superview addSubview:imageView2];
         imageView2.alpha = 0.0f;
     }
@@ -566,11 +571,11 @@ UIImageView* imageView2;
     if ([transitionType isEqualToString:@"popup"]) {
         self.webView.superview.backgroundColor = [UIColor blackColor];
    
-        self.webView.backgroundColor = [UIColor blackColor]; // [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
+        self.webView.backgroundColor = [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
         self.webView.scrollView.backgroundColor = [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
 
-
-        [imageView1 setFrame:self.webView.frame];
+        
+        [imageView1 setFrame:self.webView.bounds];
         [imageView1 setImage: viewImage];
 
         imageView1.alpha = 1.0f;
@@ -585,9 +590,10 @@ UIImageView* imageView2;
         
         if(CDV_IsIPad()) {
         self.webView.frame = CGRectMake(0,0,600.0f,600.0f);
-        self.webView.center = self.webView.superview.center;
+        self.webView.center = CGPointMake(self.webView.superview.bounds.size.width/2,self.webView.superview.bounds.size.height/2);
         }
         self.webView.transform = CGAffineTransformMakeTranslation(0.0f, 1024);
+        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
         
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.5f];
@@ -608,10 +614,11 @@ UIImageView* imageView2;
         [self.webView.superview bringSubviewToFront:imageView2];
         self.webView.alpha = 1.0f;
         [self.webView.superview sendSubviewToBack:self.webView];
-        self.webView.frame = self.webView.superview.frame;
+        self.webView.frame = self.webView.superview.bounds;
         
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
+        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
         
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.5f];
