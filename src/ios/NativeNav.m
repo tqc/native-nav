@@ -210,8 +210,6 @@ NSString* navbarTitle;
 - (void) showNavbar:(CDVInvokedUrlCommand*)command
 {
 // todo: put this somewhere better
-    [self.webView setBackgroundColor:[UIColor colorWithRed:239 green:239 blue:244 alpha:1]];
-    [self.webView.scrollView setBackgroundColor:[UIColor colorWithRed:239 green:239 blue:244 alpha:1]];
 
     
     NSString* newNavbarRoute =[command.arguments objectAtIndex:0];
@@ -536,6 +534,10 @@ UIImageView* imageView2;
 
 - (void) startNativeTransition:(CDVInvokedUrlCommand*)command
 {
+    // todo: put this somewhere better
+    self.webView.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.937 alpha:1]; /*#efefef*/
+    
+    
     NSString* transitionType =[command.arguments objectAtIndex:0];
     UIView* capturedView;
     
@@ -565,15 +567,11 @@ UIImageView* imageView2;
         [self.webView.superview addSubview:imageView2];
         imageView2.alpha = 0.0f;
     }
-    
 
-    
+
     if ([transitionType isEqualToString:@"popup"]) {
-        self.webView.superview.backgroundColor = [UIColor blackColor];
-   
-        self.webView.backgroundColor = [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
-        self.webView.scrollView.backgroundColor = [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
-
+        self.webView.superview.backgroundColor = [UIColor blackColor]; /*#efefef*/
+        
         
         [imageView1 setFrame:self.webView.bounds];
         [imageView1 setImage: viewImage];
@@ -636,8 +634,8 @@ UIImageView* imageView2;
         [UIView commitAnimations];
     }
     else if ([transitionType isEqualToString:@"crossfade"]) {
-        self.webView.superview.backgroundColor = [UIColor colorWithRed:239 green:239 blue:244 alpha:1];
-
+        self.webView.superview.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.937 alpha:1]; /*#efefef*/
+        
         [imageView1 setFrame:self.webView.frame];
         [imageView1 setImage: viewImage];
         
@@ -659,8 +657,9 @@ UIImageView* imageView2;
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
 
     }
+
     
-    
+
 }
 
 
