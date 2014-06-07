@@ -7,12 +7,7 @@
             utils = require('cordova/utils'),
             exec = require('cordova/exec');
 
-
-        // status will be:
-        // unlinked
-        // firstSync
-        // syncing
-        // synced
+        var _closeCallback = null;
 
         nn.showPopupMenu = function(route, x, y, w, h, items) {
             exec(null, null, "NativeNav", "showPopupMenu", [route, x, y, w, h, items]);
@@ -27,9 +22,16 @@
         };
 
 
-        nn.startNativeTransition = function(transitionType, originRect, callback) {
+        nn.closeModal = function() {
+            console.log("Got modal close message from native nav");
+            if (_closeCallback) _closeCallback();
+        };
+
+        nn.startNativeTransition = function(transitionType, originRect, callback, closeCallback) {
+            _closeCallback = closeCallback;
             exec(callback, null, "NativeNav", "startNativeTransition", [transitionType, originRect]);
         };
+
 
 
         nn.setKeyboardAccessory = function(buttons) {

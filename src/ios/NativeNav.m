@@ -531,12 +531,20 @@ UIBarButtonItem* flexspace;
 
 UIImageView* imageView1;
 UIImageView* imageView2;
+UIView* modalOverlay;
+
+
+- (void)handleModalOverlayTap:(UIView*)sender
+{
+        [self.commandDelegate evalJs:[NSString stringWithFormat:@"NativeNav.closeModal();"]];
+}
 
 - (void) startNativeTransition:(CDVInvokedUrlCommand*)command
 {
     // todo: put this somewhere better
     self.webView.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.937 alpha:1]; /*#efefef*/
     
+    UIView* container = self.webView.superview;
     
     NSString* transitionType =[command.arguments objectAtIndex:0];
     NSDictionary* ord =[command.arguments objectAtIndex:1];
@@ -571,18 +579,39 @@ UIImageView* imageView2;
         imageView1 = [[UIImageView alloc] initWithFrame:self.webView.frame];
         imageView1.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
         
-        [self.webView.superview addSubview:imageView1];
+        [container addSubview:imageView1];
         imageView1.alpha = 0.0f;
     }
     if (!imageView2) {
         imageView2 = [[UIImageView alloc] initWithFrame:self.webView.frame];
         imageView2.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
-        [self.webView.superview addSubview:imageView2];
+        [container addSubview:imageView2];
         imageView2.alpha = 0.0f;
     }
 
+    if (!modalOverlay) {
+        modalOverlay = [[UIView alloc] initWithFrame:self.webView.frame];
+        modalOverlay.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+        [container addSubview:modalOverlay];
+        modalOverlay.backgroundColor = [UIColor blackColor];
+        modalOverlay.alpha = 0.0f;
+        
+        UITapGestureRecognizer *singleFingerTap =
+        [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                action:@selector(handleModalOverlayTap:)];
+        [modalOverlay addGestureRecognizer:singleFingerTap];
 
+    }
+
+    
     if ([transitionType isEqualToString:@"popup"]) {
+        
+        // popup
+        // image 1 replaces web view
+        // modal overlay added in front of image view
+        // webview resized to popup and animated into place
+        
+        
         CGRect targetRect;
            if(CDV_IsIPad()) {
                targetRect = CGRectMake(self.webView.superview.bounds.size.width/2-300,self.webView.superview.bounds.size.height/2-300,600.0f,600.0f);
@@ -615,18 +644,25 @@ UIImageView* imageView2;
 
         
         
-        self.webView.superview.backgroundColor = [UIColor blackColor]; /*#efefef*/
+//        self.webView.superview.backgroundColor = [UIColor blackColor]; /*#efefef*/
         
         [imageView1 setFrame:self.webView.bounds];
         [imageView1 setImage: viewImage];
 
         imageView1.alpha = 1.0f;
-        self.webView.alpha = 1.0f;
-        [self.webView.superview bringSubviewToFront:self.webView];
+        [container bringSubviewToFront:imageView1];
 
-        if (navBar) {
-            navBar.alpha = 0.0f;
-        }
+        modalOverlay.alpha = 0.0f;
+        modalOverlay.backgroundColor = [UIColor blackColor];
+        [container bringSubviewToFront:modalOverlay];
+        
+        self.webView.alpha = 1.0f;
+        [container bringSubviewToFront:self.webView];
+
+        
+//        if (navBar) {
+//            navBar.alpha = 0.0f;
+//        }
 
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
@@ -649,7 +685,10 @@ UIImageView* imageView2;
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.3f];
         self.webView.alpha = 1.0f;
-        imageView1.alpha = 0.5f;
+        imageView1.alpha = 1.0f;
+
+        modalOverlay.alpha = 0.5f;
+
         
      //   self.webView.transform =  CGAffineTransformMakeTranslation(0.0f, 0.0f);
         layer.transform = CATransform3DIdentity;
@@ -659,6 +698,13 @@ UIImageView* imageView2;
     }
     else if ([transitionType isEqualToString:@"closepopup"]) {
 
+        // close popup
+        // image 2 replaces popup webview
+        // image 1 is background as set by popup opening
+        // webview resized to full frame
+        // image 2 animated with close transform
+        // image 1 fades out.
+        
         CGRect targetRect;
         targetRect = self.webView.frame;
         
@@ -715,6 +761,9 @@ UIImageView* imageView2;
         
         imageView2.alpha = 0.0f;
         imageView1.alpha = 0.0f;
+        modalOverlay.alpha = 0.0f;
+        
+        
         
         [UIView commitAnimations];
     }
