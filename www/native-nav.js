@@ -38,6 +38,10 @@
             exec(null, null, "NativeNav", "setKeyboardAccessory", [buttons]);
         };
 
+        nn.setKeyboardAccessoryButtonState = function(buttonStates) {
+            exec(null, null, "NativeNav", "setKeyboardAccessoryButtonState", [buttonStates]);
+        };
+
         nn.handleKeyboardAcessoryClick = function(keycode) {
             console.log("Got message from keyboard accessory: " + keycode);
         };

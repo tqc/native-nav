@@ -228,6 +228,11 @@ NSString* navbarTitle;
     if ([newNavbarRoute isEqual:[NSNull null]]) newNavbarRoute = nil;
     if ([navbarTitleChanged isEqual:[NSNull null]]) navbarTitleChanged = nil;
     
+    if (active) {
+        UIEdgeInsets insets = self.webView.scrollView.contentInset;
+        [self.webView.scrollView setContentInset:UIEdgeInsetsMake(80, insets.left, insets.bottom, insets.right)];
+    }
+    
     /*
     long y = [(NSNumber*)[command.arguments objectAtIndex:2] integerValue];
     long w = [(NSNumber*)[command.arguments objectAtIndex:3] integerValue];
@@ -354,7 +359,7 @@ UIBarButtonItem* flexspace;
 
 - (void)formAccessoryBarKeyboardWillShow:(NSNotification*)notif
 {
-
+    if (!inputAccessoryView) return;
     
     NSArray* windows = [[UIApplication sharedApplication] windows];
     
@@ -370,9 +375,11 @@ UIBarButtonItem* flexspace;
                         [view addSubview:inputAccessoryView];
 //                        [inputAccessoryView setUserInteractionEnabled:NO];
                         inputAccessoryView.frame = peripheralView.frame;
-                        
+                        inputAccessoryView.autoresizingMask = (UIViewAutoresizingFlexibleWidth);
+                        /*
                         [inputAccessoryView setTranslatesAutoresizingMaskIntoConstraints:NO];
 
+                        
                         [view addConstraint:
                          [NSLayoutConstraint constraintWithItem:inputAccessoryView
                                                       attribute:NSLayoutAttributeWidth
@@ -390,7 +397,7 @@ UIBarButtonItem* flexspace;
                                                      multiplier:1
                                                        constant:0]];
 
-                        
+                        */
                         // remove the form accessory bar
                         [peripheralView removeFromSuperview];
 
@@ -435,7 +442,7 @@ UIBarButtonItem* flexspace;
         else {
             button = [[UIBarButtonItem alloc] initWithTitle:d[@"title"] style:UIBarButtonItemStylePlain target:self action:@selector(reportKeyboardAccessoryClick:)];
         }
-        namedKbButtons[@"name"] = button;
+        namedKbButtons[name] = button;
     }
     
     [kbButtons addObject:button];
@@ -444,16 +451,42 @@ UIBarButtonItem* flexspace;
 }
 
 
+
+- (void) setKeyboardAccessoryButtonState:(CDVInvokedUrlCommand *)command {
+    NSDictionary* buttonStates = [command.arguments objectAtIndex:0];
+    NSLog(@"Setting kb accessory button state");
+    
+    if (!namedKbButtons) return;
+    
+    for (NSString* buttonName in buttonStates) {
+        NSDictionary* sd = buttonStates[buttonName];
+        UIBarButtonItem * button = namedKbButtons[buttonName];
+        if (!button) continue;
+        id oActivated = [sd objectForKey:@"active"];
+        if (oActivated) {
+            BOOL isActivated = [oActivated boolValue];
+            if (isActivated) {
+                [button setTintColor:[UIColor redColor]];
+            } else {
+                [button setTintColor:[UIColor blueColor]];
+            }
+        }
+    }
+    
+}
+
 - (void) setKeyboardAccessory:(CDVInvokedUrlCommand *)command {
     NSDictionary* options = [command.arguments objectAtIndex:0];
     NSLog(@"Setting kb accessory");
     
     if (!namedKbButtons) namedKbButtons = [NSMutableDictionary dictionary];
     
-    
+    if (!inputAccessoryView) {
+        inputAccessoryView = [[UIToolbar alloc] init];
+    }
     
 //    CGRect accessFrame = CGRectMake(0.0, 0.0, 768.0, 77.0);
-    inputAccessoryView = [[UIToolbar alloc] init];
+    
 //    inputAccessoryView.backgroundColor = [UIColor colorWithRed:0.8 green:0.8 blue:0.8 alpha:0.5];
 //    inputAccessoryView.backgroundColor = [UIColor blueColor];
     
@@ -542,8 +575,8 @@ UIView* modalOverlay;
 - (void) startNativeTransition:(CDVInvokedUrlCommand*)command
 {
     // todo: put this somewhere better
-    self.webView.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.937 alpha:1]; /*#efefef*/
-    
+    self.webView.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.957 alpha:1]; /*#efeff4*/
+
     UIView* container = self.webView.superview;
     
     NSString* transitionType =[command.arguments objectAtIndex:0];
@@ -768,7 +801,6 @@ UIView* modalOverlay;
         [UIView commitAnimations];
     }
     else if ([transitionType isEqualToString:@"crossfade"]) {
-        self.webView.superview.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.937 alpha:1]; /*#efefef*/
         
         [imageView1 setFrame:self.webView.frame];
         [imageView1 setImage: viewImage];
@@ -782,7 +814,7 @@ UIView* modalOverlay;
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.4f];
         self.webView.alpha = 1.0f;
-        imageView1.alpha = 0.0f;
+        imageView1.alpha = 1.0f;
         [UIView commitAnimations];
         
     }
