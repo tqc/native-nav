@@ -120,6 +120,52 @@ NSArray* actionSheetItems;
      
 }
 
+-(UIBarButtonItem *)createBarButtonFromDict:(NSDictionary*)bdef action:(SEL) action {
+    NSString* buttonTitle = bdef[@"title"];
+    NSString* buttonId = bdef[@"name"];
+    if (!buttonId) buttonId = [buttonTitle lowercaseString];
+    NSString* iconImageFile = bdef[@"icon"];
+    
+    UIBarButtonItem* button;
+    
+    
+    if (iconImageFile) {
+        button.imageInsets= UIEdgeInsetsMake(0, 0, 0, 0);
+        UIImage* iconImage =  [UIImage imageNamed:[NSString stringWithFormat:@"www/%@", iconImageFile]];
+      
+        
+        CGRect rect = CGRectMake(0,0,20,20);
+        UIGraphicsBeginImageContextWithOptions(rect.size, NO, 0.0f);
+        [iconImage drawInRect:rect];
+        iconImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+        
+        
+//        [button setImage:iconImage];
+        button = [[UIBarButtonItem alloc] initWithImage:iconImage style:UIButtonTypeCustom target:self action:action];
+        button.width = 40;
+    
+        
+    }
+    else if ([buttonId isEqualToString:@"add"]) {
+        button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:action];
+        
+    } else if ([buttonId isEqualToString:@"edit"]) {
+        button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemEdit target:self action:action];
+        
+    }
+    else if ([buttonId isEqualToString:@"done"]) {
+        button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:action];
+    }
+    else {
+        button = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStylePlain target:self action:action];
+    }
+
+
+    
+    return button;
+}
+
 
 NSString* navbarRoute;
 UINavigationBar *navBar;
@@ -128,6 +174,8 @@ NSArray* navbarLeftButtons;
 NSArray* navbarRightButtons;
 NSString* navbarTitleChanged;
 NSString* navbarTitle;
+
+
 
 - (void) clickedLeftNavbarButton:(UIBarButtonItem*)button
 {
@@ -180,10 +228,11 @@ NSString* navbarTitle;
             for (int i = 0; i < actionSheetItems.count; i++) {
                 [actionSheet addButtonWithTitle:[actionSheetItems[i] objectForKey:@"title"]];
             }
-/*
+            if (!CDV_IsIPad()) {
             [actionSheet addButtonWithTitle:@"Cancel"];
             actionSheet.cancelButtonIndex = [actionSheetItems count];
-  */
+            }
+            
             [actionSheet showFromBarButtonItem:button animated:YES];
         }
     }
@@ -256,7 +305,7 @@ NSString* navbarTitle;
    */
     if (!navBar) {
     navBar = [[UINavigationBar alloc] initWithFrame:CGRectMake(0, 0, self.viewController.view.bounds.size.width, 64.0)];
-       navBar.autoresizingMask = (UIViewAutoresizingFlexibleWidth);
+        navBar.autoresizingMask = NO;// (UIViewAutoresizingFlexibleWidth);
 
         // navBar.tintColor=[UIColor blueColor];
         [navBar setTranslucent:YES];
@@ -273,14 +322,7 @@ NSString* navbarTitle;
     if (navbarLeftButtons) {
     for (int i = 0; i < navbarLeftButtons.count; i++) {
         NSDictionary*  bdef = navbarLeftButtons[i];
-        NSString* buttonTitle = bdef[@"title"];
-        UIBarButtonItem *button;
-        if ([buttonTitle isEqualToString:@"Add"]) {
-            button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(clickedLeftNavbarButton:)];
-
-        } else {
-        button = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStylePlain target:self action:@selector(clickedLeftNavbarButton:)];
-        }
+        UIBarButtonItem *button = [self createBarButtonFromDict:bdef action:@selector(clickedLeftNavbarButton:)];
         button.tag = i;
         [buttons addObject: button];
 //        [actionSheet addButtonWithTitle:[actionSheetItems[i] objectForKey:@"title"]];
@@ -293,17 +335,7 @@ NSString* navbarTitle;
     if (navbarRightButtons) {
         for (int i = 0; i < navbarRightButtons.count; i++) {
             NSDictionary*  bdef = navbarRightButtons[i];
-            NSString* buttonTitle = bdef[@"title"];
-            UIBarButtonItem *button;
-            if ([buttonTitle isEqualToString:@"Add"]) {
-                button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(clickedRightNavbarButton:)];
-                
-            } else if ([buttonTitle isEqualToString:@"Edit"]) {
-                button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemEdit target:self action:@selector(clickedRightNavbarButton:)];
-                
-            } else {
-                button = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStylePlain target:self action:@selector(clickedRightNavbarButton:)];
-            }
+            UIBarButtonItem *button = [self createBarButtonFromDict:bdef action:@selector(clickedRightNavbarButton:)];
             button.tag = i;
             [buttons addObject: button];
             //        [actionSheet addButtonWithTitle:[actionSheetItems[i] objectForKey:@"title"]];
@@ -426,27 +458,19 @@ UIBarButtonItem* flexspace;
     
 }
 
-- (void) addKbButton:(NSDictionary *) d {
+- (void) addKbButton:(NSDictionary *) bdef {
     UIBarButtonItem* button;
-    NSString* name =d[@"name"];
+    NSString* name =bdef[@"name"];
     if (namedKbButtons[name]) {
         button =namedKbButtons[name];
     }
     else {
-        if ([name isEqualToString:@"add"]) {
-            button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(reportKeyboardAccessoryClick:)];
-        }
-        else if ([name isEqualToString:@"done"]) {
-            button = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(reportKeyboardAccessoryClick:)];
-        }
-        else {
-            button = [[UIBarButtonItem alloc] initWithTitle:d[@"title"] style:UIBarButtonItemStylePlain target:self action:@selector(reportKeyboardAccessoryClick:)];
-        }
-        namedKbButtons[name] = button;
+        UIBarButtonItem *button = [self createBarButtonFromDict:bdef action:@selector(reportKeyboardAccessoryClick:)];
+               namedKbButtons[name] = button;
     }
     
     [kbButtons addObject:button];
-    [kbButtonDefinitions addObject:d];
+    [kbButtonDefinitions addObject:bdef];
 
 }
 
