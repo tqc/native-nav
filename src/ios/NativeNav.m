@@ -539,7 +539,20 @@ UIImageView* imageView2;
     
     
     NSString* transitionType =[command.arguments objectAtIndex:0];
+    NSDictionary* ord =[command.arguments objectAtIndex:1];
+    CGRect originRect;
+    BOOL hasOrigin = NO;
+    
+    if (![ord isEqual:[NSNull null]]) {
+        originRect = CGRectMake([(NSNumber*)ord[@"left"] floatValue], [(NSNumber*)ord[@"top"] floatValue], [(NSNumber*)ord[@"width"] floatValue], [(NSNumber*)ord[@"height"] floatValue]);
+        hasOrigin = YES;
+    }
+    
+    
+    
     UIView* capturedView;
+    
+    
     
     if ([transitionType isEqualToString:@"popup"]) {
         capturedView =self.webView.superview;
@@ -570,8 +583,39 @@ UIImageView* imageView2;
 
 
     if ([transitionType isEqualToString:@"popup"]) {
-        self.webView.superview.backgroundColor = [UIColor blackColor]; /*#efefef*/
+        CGRect targetRect;
+           if(CDV_IsIPad()) {
+               targetRect = CGRectMake(self.webView.superview.bounds.size.width/2-300,self.webView.superview.bounds.size.height/2-300,600.0f,600.0f);
+           }
+           else {
+               targetRect = self.webView.bounds;
+           }
         
+        if (!hasOrigin) {
+            originRect = CGRectMake(targetRect.origin.x, self.webView.superview.bounds.size.height, targetRect.size.width, targetRect.size.height);
+        }
+        
+
+
+
+        CATransform3D transform = CATransform3DIdentity;
+//     transform.m34 = 1.0 / -5000;
+
+
+        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(targetRect.origin.x+targetRect.size.width/2), (originRect.origin.y+originRect.size.height/2)-(targetRect.origin.y+targetRect.size.height/2), 0);
+        
+        transform = CATransform3DScale(transform, originRect.size.width/targetRect.size.width, originRect.size.height/targetRect.size.height, 1);
+        
+        
+        if (hasOrigin) {
+            //      transform = CATransform3DRotate(transform, 180.0f * M_PI / 180.0f, 0.0f, 1.0f, 0.0f);
+
+        }
+        
+
+        
+        
+        self.webView.superview.backgroundColor = [UIColor blackColor]; /*#efefef*/
         
         [imageView1 setFrame:self.webView.bounds];
         [imageView1 setImage: viewImage];
@@ -587,48 +631,89 @@ UIImageView* imageView2;
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
         if(CDV_IsIPad()) {
-        self.webView.frame = CGRectMake(0,0,600.0f,600.0f);
-        self.webView.center = CGPointMake(self.webView.superview.bounds.size.width/2,self.webView.superview.bounds.size.height/2);
+        self.webView.frame = targetRect;
         }
-        self.webView.transform = CGAffineTransformMakeTranslation(0.0f, 1024);
+        
+        
+        
+        //self.webView.transform = atrans;
+        CALayer *layer = self.webView.layer;
+    //    layer.doubleSided = NO;
+        layer.transform = transform;
+
         self.webView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
         
+        self.webView.alpha = 0.0f;
+
+        
         [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.5f];
-        self.webView.transform =  CGAffineTransformMakeTranslation(0.0f, -50.0f);
+        [UIView setAnimationDuration:0.3f];
         self.webView.alpha = 1.0f;
         imageView1.alpha = 0.5f;
+        
+     //   self.webView.transform =  CGAffineTransformMakeTranslation(0.0f, 0.0f);
+        layer.transform = CATransform3DIdentity;
         
         [UIView commitAnimations];
 
     }
     else if ([transitionType isEqualToString:@"closepopup"]) {
-        NSLog(@"%f", self.webView.frame.origin.y);
-        imageView2.transform = CGAffineTransformMakeTranslation(0.0f, -50.0f);
+
+        CGRect targetRect;
+        targetRect = self.webView.frame;
+        
+        if (!hasOrigin) {
+            originRect = CGRectMake(targetRect.origin.x, self.webView.superview.bounds.size.height, targetRect.size.width, targetRect.size.height);
+        }
+     
+        
+        CATransform3D transform = CATransform3DIdentity;
+
+        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(targetRect.origin.x+targetRect.size.width/2), (originRect.origin.y+originRect.size.height/2)-(targetRect.origin.y+targetRect.size.height/2), 0);
+        
+        transform = CATransform3DScale(transform, originRect.size.width/targetRect.size.width, originRect.size.height/targetRect.size.height, 1);
+        
+        
+        if (hasOrigin) {
+            
+            
+        }
+        
+        imageView2.alpha = 1.0f;
+        CALayer *layer = imageView2.layer;
+        layer.transform = CATransform3DIdentity;
+        
+        
         [imageView2 setFrame:self.webView.frame];
         [imageView2 setImage: viewImage];
 
+
         imageView2.alpha = 1.0f;
+        //    layer.doubleSided = NO;
+
         [self.webView.superview bringSubviewToFront:imageView2];
         self.webView.alpha = 1.0f;
         [self.webView.superview sendSubviewToBack:self.webView];
         self.webView.frame = self.webView.superview.bounds;
+        layer.transform = CATransform3DIdentity;
         
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
         self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
         
         [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.5f];
+        [UIView setAnimationDuration:0.3f];
         
-        imageView2.transform = CGAffineTransformMakeTranslation(0.0f, 1024);
+        
+        layer.transform = transform;
+
         
         if (navBar) {
             navBar.alpha = 1.0f;
         }
 
         
-        imageView2.alpha = 1.0f;
+        imageView2.alpha = 0.0f;
         imageView1.alpha = 0.0f;
         
         [UIView commitAnimations];
@@ -646,7 +731,7 @@ UIImageView* imageView2;
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
         [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.5f];
+        [UIView setAnimationDuration:0.4f];
         self.webView.alpha = 1.0f;
         imageView1.alpha = 0.0f;
         [UIView commitAnimations];

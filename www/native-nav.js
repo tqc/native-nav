@@ -27,8 +27,8 @@
         };
 
 
-        nn.startNativeTransition = function(transitionType, callback) {
-            exec(callback, null, "NativeNav", "startNativeTransition", [transitionType]);
+        nn.startNativeTransition = function(transitionType, originRect, callback) {
+            exec(callback, null, "NativeNav", "startNativeTransition", [transitionType, originRect]);
         };
 
 
