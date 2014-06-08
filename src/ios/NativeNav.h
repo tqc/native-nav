@@ -19,7 +19,7 @@
 
 #import <Cordova/CDVPlugin.h>
 
-@interface NativeNav : CDVPlugin<UITabBarDelegate, UIActionSheetDelegate, UINavigationBarDelegate> {
+@interface NativeNav : CDVPlugin<UITabBarDelegate, UIActionSheetDelegate, UINavigationBarDelegate, UIGestureRecognizerDelegate> {
 /*
     @protected
     NSString* _appKey;

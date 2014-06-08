@@ -32,11 +32,33 @@
             if (_closeCallback) _closeCallback();
         };
 
+        nn.setCloseModalCallback = function(closeCallback) {
+            _closeCallback = closeCallback;
+        };
+
         nn.startNativeTransition = function(transitionType, originRect, callback, closeCallback) {
             _closeCallback = closeCallback;
             exec(callback, null, "NativeNav", "startNativeTransition", [transitionType, originRect]);
         };
 
+
+        nn.setValidGestures = function(gestures) {
+            exec(null, null, "NativeNav", "setValidGestures", [gestures]);
+        };
+
+        nn.updateViewWithComponent = function(componentId) {
+            // fill the frame with a side panel
+            console.log("NativeNav requested component " + componentId);
+        };
+
+        nn.updateViewWithRoute = function(newRoute) {
+            // move to the next route
+            console.log("NativeNav requested route " + newRoute);
+        };
+
+        nn.cancelGesture = function() {
+            console.log("Gesture canceled");
+        };
 
 
         nn.setKeyboardAccessory = function(buttons) {

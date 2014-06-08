@@ -65,8 +65,7 @@
                 }];
     
     
-    
-    
+    [self initGestureRecognizers];
     
 }
 
@@ -82,6 +81,326 @@
 
 // //////////////////////////////////////////////////
 
+float _centerX;
+
+UIScreenEdgePanGestureRecognizer* grLeftEdgePan;
+UIScreenEdgePanGestureRecognizer* grRightEdgePan;
+UIPanGestureRecognizer* grPanToLeft;
+UIPanGestureRecognizer* grPanToRight;
+
+NSDictionary* currentValidGestures;
+
+
+
+- (void)initGestureRecognizers {
+    
+    
+    currentValidGestures = [NSDictionary dictionary];
+
+    
+    grPanToLeft = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleGesturePanToLeft:)];
+    [self.viewController.view addGestureRecognizer:grPanToLeft];
+    grPanToLeft.delegate = self;
+    
+    grPanToRight = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleGesturePanToRight:)];
+    grPanToRight.delegate = self;
+    [self.viewController.view addGestureRecognizer:grPanToRight];
+    
+    grLeftEdgePan = [[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:self action:@selector(handleGestureLeftEdgePan:)];
+    grLeftEdgePan.edges = UIRectEdgeLeft;
+    [self.viewController.view addGestureRecognizer:grLeftEdgePan];
+    
+    
+    grRightEdgePan = [[UIScreenEdgePanGestureRecognizer alloc] initWithTarget:self action:@selector(handleGestureRightEdgePan:)];
+    grRightEdgePan.edges = UIRectEdgeRight;
+    [self.viewController.view addGestureRecognizer:grRightEdgePan];
+
+}
+
+
+- (IBAction)handleGestureLeftEdgePan:(UIScreenEdgePanGestureRecognizer *)gesture {
+    NSLog(@"Swiping from left edge");
+    UIView* container = self.viewController.view;
+    CGPoint translation = [grLeftEdgePan translationInView:container];
+    
+    if (currentValidGestures[@"leftBorder"]) {
+        NSDictionary* d =currentValidGestures[@"leftBorder"];
+        NSLog(@"leftBorder: %@", d[@"component"]);
+        
+        
+        if(UIGestureRecognizerStateBegan == gesture.state) {
+            if (d[@"component"]) {
+                // swap webview with image
+                
+                originalInsets = self.webView.scrollView.contentInset;
+                originalFrame = self.webView.bounds;
+                modalFrame = CGRectMake(0, 0, 260, container.bounds.size.height);
+                
+                [self replaceAllWithImage];
+                
+                
+                self.webView.alpha = 1.0f;
+                [container bringSubviewToFront:self.webView];
+                
+                // tell js to render next view
+                self.webView.frame = modalFrame;
+                
+                self.webView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
+                
+                
+                
+                
+                [self.commandDelegate evalJs:[NSString stringWithFormat:@"NativeNav.updateViewWithComponent(\"%@\");", d[@"component"]]];
+                
+                
+                [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
+                
+                
+            }
+            
+            
+            [UIView beginAnimations:nil context:NULL];
+            [UIView setAnimationDuration:0.3f];
+            
+            
+            modalOverlay.alpha = 0.5f;
+            
+            
+            
+            [UIView commitAnimations];
+            
+            
+        }
+        
+        
+        if(UIGestureRecognizerStateBegan == gesture.state ||
+           UIGestureRecognizerStateChanged == gesture.state) {
+            // animate the views
+            
+            if (d[@"component"]) {
+                CGAffineTransform transform = CGAffineTransformMakeTranslation(translation.x-260, 0);
+                if (translation.x > 260) {
+                    transform = CGAffineTransformMakeTranslation(0, 0);
+                }
+                self.webView.transform = transform;
+                
+            }
+            
+        }
+        else if(UIGestureRecognizerStateCancelled == gesture.state || UIGestureRecognizerStateFailed == gesture.state || (UIGestureRecognizerStateEnded == gesture.state && translation.x < 60)){
+            // on cancel, tell js to go back
+            
+            [self replaceModalWebViewWithImage];
+            
+            
+            CGAffineTransform transform = CGAffineTransformMakeTranslation(-260, 0);
+            
+            
+            self.webView.alpha = 1.0f;
+            [self.webView.superview sendSubviewToBack:self.webView];
+            self.webView.frame = self.webView.superview.bounds;
+            imageView2.transform = CGAffineTransformIdentity;
+            
+            [self.webView.scrollView setContentInset:originalInsets];
+            [self.commandDelegate evalJs:[NSString stringWithFormat:@"NativeNav.cancelGesture();"]];
+            
+            
+            self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+            
+            
+            
+            [UIView beginAnimations:nil context:NULL];
+            [UIView setAnimationDuration:0.3f];
+            
+            
+            imageView2.transform = transform;
+            
+            
+            
+            imageView2.alpha = 0.0f;
+            imageView1.alpha = 0.0f;
+            modalOverlay.alpha = 0.0f;
+            
+            
+            
+            [UIView commitAnimations];
+            
+            
+            
+        }
+        else { //ended
+            
+            [UIView beginAnimations:nil context:NULL];
+            [UIView setAnimationDuration:0.3f];
+            
+            self.webView.transform = CGAffineTransformIdentity;
+            [UIView commitAnimations];
+            
+        }
+        
+    }
+};
+
+
+
+- (IBAction)handleGestureRightEdgePan:(UIScreenEdgePanGestureRecognizer *)gesture {
+
+    NSLog(@"Swiping from right edge");
+    UIView* container = self.viewController.view;
+    CGPoint translation = [grRightEdgePan translationInView:container];
+
+    if (currentValidGestures[@"rightBorder"]) {
+        NSDictionary* d =currentValidGestures[@"rightBorder"];
+        NSLog(@"rightBorder: %@", d[@"component"]);
+        
+        
+        if(UIGestureRecognizerStateBegan == gesture.state) {
+            if (d[@"component"]) {
+            // swap webview with image
+            
+            originalInsets = self.webView.scrollView.contentInset;
+            originalFrame = self.webView.bounds;
+            modalFrame = CGRectMake(container.bounds.size.width-260, 0, 260, container.bounds.size.height);
+            
+            [self replaceAllWithImage];
+            
+            
+            self.webView.alpha = 1.0f;
+            [container bringSubviewToFront:self.webView];
+            
+            // tell js to render next view
+            self.webView.frame = modalFrame;
+        
+                self.webView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
+                
+
+            
+            
+            [self.commandDelegate evalJs:[NSString stringWithFormat:@"NativeNav.updateViewWithComponent(\"%@\");", d[@"component"]]];
+            
+            
+            [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
+
+            
+            }
+
+            
+            [UIView beginAnimations:nil context:NULL];
+            [UIView setAnimationDuration:0.3f];
+            
+            
+            modalOverlay.alpha = 0.5f;
+            
+            
+            
+            [UIView commitAnimations];
+
+   
+        }
+        
+        
+        if(UIGestureRecognizerStateBegan == gesture.state ||
+           UIGestureRecognizerStateChanged == gesture.state) {
+            // animate the views
+            
+            if (d[@"component"]) {
+                CGAffineTransform transform = CGAffineTransformMakeTranslation(260+translation.x, 0);
+                if (translation.x < -260) {
+                     transform = CGAffineTransformMakeTranslation(0, 0);
+                }
+                self.webView.transform = transform;
+                
+            }
+            
+        }
+        else if(UIGestureRecognizerStateCancelled == gesture.state || UIGestureRecognizerStateFailed == gesture.state || (UIGestureRecognizerStateEnded == gesture.state && translation.x > -60)){
+            // on cancel, tell js to go back
+            
+            [self replaceModalWebViewWithImage];
+            
+            
+            CGAffineTransform transform = CGAffineTransformMakeTranslation(260, 0);
+            
+            
+            self.webView.alpha = 1.0f;
+            [self.webView.superview sendSubviewToBack:self.webView];
+            self.webView.frame = self.webView.superview.bounds;
+            imageView2.transform = CGAffineTransformIdentity;
+            
+            [self.webView.scrollView setContentInset:originalInsets];
+            [self.commandDelegate evalJs:[NSString stringWithFormat:@"NativeNav.cancelGesture();"]];
+            
+            
+            self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+            
+            
+            
+            [UIView beginAnimations:nil context:NULL];
+            [UIView setAnimationDuration:0.3f];
+            
+            
+            imageView2.transform = transform;
+            
+            
+            
+            imageView2.alpha = 0.0f;
+            imageView1.alpha = 0.0f;
+            modalOverlay.alpha = 0.0f;
+            
+            
+            
+            [UIView commitAnimations];
+
+            
+            
+        }
+        else { //ended
+            
+            [UIView beginAnimations:nil context:NULL];
+            [UIView setAnimationDuration:0.3f];
+            
+              self.webView.transform = CGAffineTransformIdentity;
+            [UIView commitAnimations];
+
+        }
+
+            }
+};
+
+
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
+
+    if (gestureRecognizer == grPanToLeft) {
+        CGPoint velocity = [grPanToLeft velocityInView:self.viewController.view];
+        return velocity.x > 0;
+    }
+    else if (gestureRecognizer == grPanToRight) {
+        CGPoint velocity = [grPanToRight velocityInView:self.viewController.view];
+        return velocity.x < 0;
+    }
+    else {
+        return YES;
+    }
+}
+
+
+- (IBAction)handleGesturePanToLeft:(UIPanGestureRecognizer *)gesture {
+    NSLog(@"Swiping to left view");
+};
+
+- (IBAction)handleGesturePanToRight:(UIPanGestureRecognizer *)gesture {
+    NSLog(@"Swiping to right view");
+};
+
+
+
+- (void) setValidGestures:(CDVInvokedUrlCommand*)command
+{
+    currentValidGestures = [command.arguments objectAtIndex:0];
+}
+
+
+// /////////////////////////////////////////////////
 #pragma Plugin interface
 
 NSString* actionSheetRoute;
@@ -727,8 +1046,79 @@ UIBarButtonItem* flexspace;
 /* Transitions */
 
 
-UIImageView* imageView1;
-UIImageView* imageView2;
+CGRect originalFrame;
+CGRect modalFrame;
+
+
+// on starting a transition, the full size web view is replaced with an image and a modal overlay applied
+- (void)replaceOriginalWebViewWithImage {
+    UIView* capturedView=self.webView;
+    UIView* container = self.webView.superview;
+    
+    UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
+    [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    [imageView1 setFrame:originalFrame];
+    [imageView1 setImage: viewImage];
+    
+    imageView1.alpha = 1.0f;
+    
+    modalOverlay.alpha = 0.0f;
+    modalOverlay.backgroundColor = [UIColor blackColor];
+    [container sendSubviewToBack:self.webView];
+}
+
+- (void)replaceAllWithImage {
+    
+    UIView* capturedView=self.webView.superview;
+    UIView* container = self.webView.superview;
+
+    UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
+    [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    [imageView1 setFrame:originalFrame];
+    [imageView1 setImage: viewImage];
+    
+    imageView1.alpha = 1.0f;
+    [container bringSubviewToFront:imageView1];
+    
+    modalOverlay.alpha = 0.0f;
+    modalOverlay.backgroundColor = [UIColor blackColor];
+    [container bringSubviewToFront:modalOverlay];
+}
+
+
+// on closing a modal, the smaller web view is replaced with an image and the
+- (void)replaceModalWebViewWithImage {
+
+    UIView* capturedView=self.webView;
+    UIView* container = self.webView.superview;
+    
+    UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
+    [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+
+    imageView2.alpha = 1.0f;
+    imageView2.layer.transform = CATransform3DIdentity;
+    
+    
+    [imageView2 setFrame:self.webView.frame];
+    [imageView2 setImage: viewImage];
+    
+    [container bringSubviewToFront:imageView2];
+}
+
+
+
+
+UIImageView* imageView1; // always full screen
+UIImageView* imageView2; // used for a closing modal
 UIView* modalOverlay;
 UIEdgeInsets originalInsets;
 
@@ -755,23 +1145,8 @@ UIEdgeInsets originalInsets;
     }
     
     
-    
     UIView* capturedView;
     
-    
-    
-    if ([transitionType isEqualToString:@"popup"]) {
-        capturedView =self.webView.superview;
-    }
-    else {
-        capturedView = self.webView;
-    }
-    
-    
-    UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
-    [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
-    UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
     
     if (!imageView1) {
         imageView1 = [[UIImageView alloc] initWithFrame:self.webView.frame];
@@ -810,30 +1185,29 @@ UIEdgeInsets originalInsets;
         // webview resized to popup and animated into place
         
         originalInsets = self.webView.scrollView.contentInset;
+        originalFrame = self.webView.bounds;
         
         
-        CGRect targetRect;
         if(CDV_IsIPad()) {
-            targetRect = CGRectMake(self.webView.superview.bounds.size.width/2-300,self.webView.superview.bounds.size.height/2-300,600.0f,600.0f);
+            modalFrame = CGRectMake(self.webView.superview.bounds.size.width/2-300,self.webView.superview.bounds.size.height/2-300,600.0f,600.0f);
         }
         else {
-            targetRect = self.webView.bounds;
+            modalFrame = self.webView.bounds;
         }
+        
+        [self replaceAllWithImage];
         
         if (!hasOrigin) {
-            originRect = CGRectMake(targetRect.origin.x, self.webView.superview.bounds.size.height, targetRect.size.width, targetRect.size.height);
+            originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
         }
-        
-        
-        
         
         CATransform3D transform = CATransform3DIdentity;
         //     transform.m34 = 1.0 / -5000;
         
         
-        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(targetRect.origin.x+targetRect.size.width/2), (originRect.origin.y+originRect.size.height/2)-(targetRect.origin.y+targetRect.size.height/2), 0);
+        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(modalFrame.origin.x+modalFrame.size.width/2), (originRect.origin.y+originRect.size.height/2)-(modalFrame.origin.y+modalFrame.size.height/2), 0);
         
-        transform = CATransform3DScale(transform, originRect.size.width/targetRect.size.width, originRect.size.height/targetRect.size.height, 1);
+        transform = CATransform3DScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height, 1);
         
         
         if (hasOrigin) {
@@ -842,37 +1216,16 @@ UIEdgeInsets originalInsets;
         }
         
         
-        
-        
-        //        self.webView.superview.backgroundColor = [UIColor blackColor]; /*#efefef*/
-        
-        [imageView1 setFrame:self.webView.bounds];
-        [imageView1 setImage: viewImage];
-        
-        imageView1.alpha = 1.0f;
-        [container bringSubviewToFront:imageView1];
-        
-        modalOverlay.alpha = 0.0f;
-        modalOverlay.backgroundColor = [UIColor blackColor];
-        [container bringSubviewToFront:modalOverlay];
-        
+
         self.webView.alpha = 1.0f;
         [container bringSubviewToFront:self.webView];
         
-        
-        //        if (navBar) {
-        //            navBar.alpha = 0.0f;
-        //        }
-        
+
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
-        if(CDV_IsIPad()) {
-            self.webView.frame = targetRect;
-        }
+            self.webView.frame = modalFrame;
         
         
-        
-        //self.webView.transform = atrans;
         CALayer *layer = self.webView.layer;
         //    layer.doubleSided = NO;
         layer.transform = transform;
@@ -882,13 +1235,9 @@ UIEdgeInsets originalInsets;
         self.webView.alpha = 0.0f;
         
         
-        UIEdgeInsets insets = self.webView.scrollView.contentInset;
-        
-        
         [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
         
-        
-        
+    
         
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.3f];
@@ -897,13 +1246,12 @@ UIEdgeInsets originalInsets;
         
         modalOverlay.alpha = 0.5f;
         
-        
-        //   self.webView.transform =  CGAffineTransformMakeTranslation(0.0f, 0.0f);
         layer.transform = CATransform3DIdentity;
         
         [UIView commitAnimations];
         
     }
+    
     else if ([transitionType isEqualToString:@"closepopup"]) {
         
         // close popup
@@ -913,13 +1261,16 @@ UIEdgeInsets originalInsets;
         // image 2 animated with close transform
         // image 1 fades out.
         
+        
+        [self replaceModalWebViewWithImage];
+        
+        
         CGRect targetRect;
         targetRect = self.webView.frame;
         
         if (!hasOrigin) {
             originRect = CGRectMake(targetRect.origin.x, self.webView.superview.bounds.size.height, targetRect.size.width, targetRect.size.height);
         }
-        
         
         CATransform3D transform = CATransform3DIdentity;
         
@@ -928,28 +1279,14 @@ UIEdgeInsets originalInsets;
         transform = CATransform3DScale(transform, originRect.size.width/targetRect.size.width, originRect.size.height/targetRect.size.height, 1);
         
         
-        if (hasOrigin) {
-            
-            
-        }
-        
-        imageView2.alpha = 1.0f;
-        CALayer *layer = imageView2.layer;
-        layer.transform = CATransform3DIdentity;
         
         
-        [imageView2 setFrame:self.webView.frame];
-        [imageView2 setImage: viewImage];
-        
-        
-        imageView2.alpha = 1.0f;
-        //    layer.doubleSided = NO;
         
         [self.webView.superview bringSubviewToFront:imageView2];
         self.webView.alpha = 1.0f;
         [self.webView.superview sendSubviewToBack:self.webView];
         self.webView.frame = self.webView.superview.bounds;
-        layer.transform = CATransform3DIdentity;
+        imageView2.layer.transform = CATransform3DIdentity;
         [self.webView.scrollView setContentInset:originalInsets];
         
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
@@ -958,17 +1295,12 @@ UIEdgeInsets originalInsets;
         
         
         
-        
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.3f];
         
         
-        layer.transform = transform;
+        imageView2.layer.transform = transform;
         
-        
-        if (navBar) {
-            navBar.alpha = 1.0f;
-        }
         
         
         imageView2.alpha = 0.0f;
@@ -979,12 +1311,180 @@ UIEdgeInsets originalInsets;
         
         [UIView commitAnimations];
     }
-    else if ([transitionType isEqualToString:@"crossfade"]) {
+    
+    else if ([transitionType isEqualToString:@"showrightpanel"]) {
         
-        [imageView1 setFrame:self.webView.frame];
-        [imageView1 setImage: viewImage];
+        originalInsets = self.webView.scrollView.contentInset;
+        originalFrame = self.webView.bounds;
+        modalFrame = CGRectMake(container.bounds.size.width-260, 0, 260, container.bounds.size.height);
         
+        [self replaceAllWithImage];
+        
+        if (!hasOrigin) {
+            originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
+        }
+        
+        CGAffineTransform transform = CGAffineTransformMakeTranslation(260, 0);
+        
+        self.webView.alpha = 1.0f;
+        [container bringSubviewToFront:self.webView];
+        
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        self.webView.frame = modalFrame;
+        
+        self.webView.transform = transform;
+        
+        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
+        
+        self.webView.alpha = 0.0f;
+        
+        
+        [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
+        
+        
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        self.webView.alpha = 1.0f;
         imageView1.alpha = 1.0f;
+        
+        modalOverlay.alpha = 0.5f;
+        
+        self.webView.transform = CGAffineTransformIdentity;
+        
+        [UIView commitAnimations];
+        
+    }
+    else if ([transitionType isEqualToString:@"hiderightpanel"]) {
+        
+        
+        [self replaceModalWebViewWithImage];
+        
+        
+        CGAffineTransform transform = CGAffineTransformMakeTranslation(260, 0);
+        
+        
+        self.webView.alpha = 1.0f;
+        [self.webView.superview sendSubviewToBack:self.webView];
+        self.webView.frame = self.webView.superview.bounds;
+        imageView2.transform = CGAffineTransformIdentity;
+        
+        [self.webView.scrollView setContentInset:originalInsets];
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+        
+        
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        
+        
+        imageView2.transform = transform;
+        
+        
+        
+        imageView2.alpha = 0.0f;
+        imageView1.alpha = 0.0f;
+        modalOverlay.alpha = 0.0f;
+        
+        
+        
+        [UIView commitAnimations];
+    }
+    
+    
+    else if ([transitionType isEqualToString:@"showleftpanel"]) {
+        
+        originalInsets = self.webView.scrollView.contentInset;
+        originalFrame = self.webView.bounds;
+        modalFrame = CGRectMake(0, 0, 260, container.bounds.size.height);
+        
+        [self replaceAllWithImage];
+        
+        CGAffineTransform transform = CGAffineTransformMakeTranslation(-260, 0);
+        
+        self.webView.alpha = 1.0f;
+        [container bringSubviewToFront:self.webView];
+        
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        self.webView.frame = modalFrame;
+        
+        self.webView.transform = transform;
+        
+        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
+        
+        self.webView.alpha = 0.0f;
+        
+        
+        [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
+        
+        
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        self.webView.alpha = 1.0f;
+        imageView1.alpha = 1.0f;
+        
+        modalOverlay.alpha = 0.5f;
+        
+        self.webView.transform = CGAffineTransformIdentity;
+        
+        [UIView commitAnimations];
+        
+    }
+    else if ([transitionType isEqualToString:@"hideleftpanel"]) {
+        
+        
+        [self replaceModalWebViewWithImage];
+        
+        
+        CGAffineTransform transform = CGAffineTransformMakeTranslation(-260, 0);
+        
+        
+        self.webView.alpha = 1.0f;
+        [self.webView.superview sendSubviewToBack:self.webView];
+        self.webView.frame = self.webView.superview.bounds;
+        imageView2.transform = CGAffineTransformIdentity;
+        
+        [self.webView.scrollView setContentInset:originalInsets];
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+        
+        
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        
+        
+        imageView2.transform = transform;
+        
+        
+        
+        imageView2.alpha = 0.0f;
+        imageView1.alpha = 0.0f;
+        modalOverlay.alpha = 0.0f;
+        
+        
+        
+        [UIView commitAnimations];
+    }
+
+    else if ([transitionType isEqualToString:@"crossfade"]) {
+
+        originalFrame = self.webView.bounds;
+ 
+        [self replaceOriginalWebViewWithImage];
+        modalOverlay.alpha = 0.0f;
+
+        
         self.webView.alpha = 0.0f;
         [self.webView.superview sendSubviewToBack:imageView1];
         
