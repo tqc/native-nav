@@ -124,6 +124,8 @@ NSDictionary* currentValidGestures;
     CGPoint translation = [grLeftEdgePan translationInView:container];
     
     if (currentValidGestures[@"leftBorder"]) {
+        [self.webView resignFirstResponder];
+
         NSDictionary* d =currentValidGestures[@"leftBorder"];
         NSLog(@"leftBorder: %@", d[@"component"]);
         
@@ -250,7 +252,9 @@ NSDictionary* currentValidGestures;
     CGPoint translation = [grRightEdgePan translationInView:container];
 
     if (currentValidGestures[@"rightBorder"]) {
-        NSDictionary* d =currentValidGestures[@"rightBorder"];
+
+        [self.webView resignFirstResponder];
+NSDictionary* d =currentValidGestures[@"rightBorder"];
         NSLog(@"rightBorder: %@", d[@"component"]);
         
         
@@ -1131,7 +1135,7 @@ UIEdgeInsets originalInsets;
 {
     // todo: put this somewhere better
     self.webView.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.957 alpha:1]; /*#efeff4*/
-    
+    [self.webView resignFirstResponder];
     UIView* container = self.webView.superview;
     
     NSString* transitionType =[command.arguments objectAtIndex:0];
@@ -1476,6 +1480,89 @@ UIEdgeInsets originalInsets;
         
         [UIView commitAnimations];
     }
+    if ([transitionType isEqualToString:@"zoomin"]) {
+        
+        
+        originalInsets = self.webView.scrollView.contentInset;
+        originalFrame = self.webView.bounds;
+            modalFrame = self.webView.bounds;
+
+        imageView1.layer.transform = CATransform3DIdentity;
+
+        [self replaceOriginalWebViewWithImage];
+        
+        if (!hasOrigin) {
+            originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
+        }
+        
+        CATransform3D transform = CATransform3DIdentity;
+        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(modalFrame.origin.x+modalFrame.size.width/2), (originRect.origin.y+originRect.size.height/2)-(modalFrame.origin.y+modalFrame.size.height/2), 0);
+        
+        transform = CATransform3DScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height, 1);
+        
+        
+        [container sendSubviewToBack:imageView1];
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        
+        self.webView.layer.transform = transform;
+        
+        self.webView.alpha = 0.0f;
+        
+        modalOverlay.alpha = 0.0f;
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        self.webView.alpha = 1.0f;
+        imageView1.alpha = 1.0f;
+        
+        self.webView.layer.transform = CATransform3DIdentity;
+        
+        [UIView commitAnimations];
+        
+    }
+    if ([transitionType isEqualToString:@"zoomout"]) {
+        
+        
+        originalInsets = self.webView.scrollView.contentInset;
+        originalFrame = self.webView.bounds;
+        modalFrame = self.webView.bounds;
+        
+        [self replaceOriginalWebViewWithImage];
+        
+        if (!hasOrigin) {
+            originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
+        }
+        
+        CATransform3D transform = CATransform3DIdentity;
+        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(modalFrame.origin.x+modalFrame.size.width/2), (originRect.origin.y+originRect.size.height/2)-(modalFrame.origin.y+modalFrame.size.height/2), 0);
+        
+        transform = CATransform3DScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height, 1);
+        
+        
+        [container sendSubviewToBack:self.webView];
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+        
+        imageView1.layer.transform = CATransform3DIdentity;
+        
+        self.webView.alpha = 0.0f;
+        
+        modalOverlay.alpha = 0.0f;
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        self.webView.alpha = 1.0f;
+        imageView1.alpha = 0.0f;
+        
+        imageView1.layer.transform = transform;
+
+        
+        [UIView commitAnimations];
+        
+    }
 
     else if ([transitionType isEqualToString:@"crossfade"]) {
 
@@ -1491,7 +1578,7 @@ UIEdgeInsets originalInsets;
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
         [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.4f];
+        [UIView setAnimationDuration:0.5f];
         self.webView.alpha = 1.0f;
         imageView1.alpha = 1.0f;
         [UIView commitAnimations];
