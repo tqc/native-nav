@@ -17,6 +17,11 @@
             exec(null, null, "NativeNav", "showNavbar", [route, active, leftButtons, title, rightButtons, titleChanged]);
         };
 
+        nn.showTabbar = function(route, active, buttons, selectedTab) {
+            exec(null, null, "NativeNav", "showTabbar", [route, active, buttons, selectedTab]);
+        };
+
+
         nn.handleAction = function(route, action) {
             console.log("Got message from native nav: " + route + " => " + action);
         };
