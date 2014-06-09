@@ -124,7 +124,7 @@ NSDictionary* currentValidGestures;
     CGPoint translation = [grLeftEdgePan translationInView:container];
     
     if (currentValidGestures[@"leftBorder"]) {
-        [self.webView resignFirstResponder];
+        [self.webView endEditing:YES];
 
         NSDictionary* d =currentValidGestures[@"leftBorder"];
         NSLog(@"leftBorder: %@", d[@"component"]);
@@ -253,7 +253,7 @@ NSDictionary* currentValidGestures;
 
     if (currentValidGestures[@"rightBorder"]) {
 
-        [self.webView resignFirstResponder];
+        [self.webView endEditing:YES];
 NSDictionary* d =currentValidGestures[@"rightBorder"];
         NSLog(@"rightBorder: %@", d[@"component"]);
         
@@ -1140,7 +1140,7 @@ BOOL hasOrigin;
 {
     // todo: put this somewhere better
     self.webView.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.957 alpha:1]; /*#efeff4*/
-    [self.webView resignFirstResponder];
+    [self.webView endEditing:YES];
     UIView* container = self.webView.superview;
     
     transitionType =[command.arguments objectAtIndex:0];
@@ -1149,7 +1149,13 @@ BOOL hasOrigin;
     hasOrigin = NO;
     
     if (![ord isEqual:[NSNull null]]) {
-        originRect = CGRectMake([(NSNumber*)ord[@"left"] floatValue], [(NSNumber*)ord[@"top"] floatValue], [(NSNumber*)ord[@"width"] floatValue], [(NSNumber*)ord[@"height"] floatValue]);
+        float top = [(NSNumber*)ord[@"top"] floatValue];
+        if (originalInsets.top) {
+            top += originalInsets.top;
+        } else {
+            top+= self.webView.scrollView.contentInset.top;
+        }
+        originRect = CGRectMake([(NSNumber*)ord[@"left"] floatValue], top, [(NSNumber*)ord[@"width"] floatValue], [(NSNumber*)ord[@"height"] floatValue]);
         hasOrigin = YES;
     }
     
@@ -1206,6 +1212,7 @@ BOOL hasOrigin;
         if (!hasOrigin) {
             originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
         }
+        
         
         CATransform3D transform = CATransform3DIdentity;
         //     transform.m34 = 1.0 / -5000;
@@ -1409,24 +1416,25 @@ BOOL hasOrigin;
         if (!hasOrigin) {
             originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
         }
-        
         CGAffineTransform transform = CGAffineTransformIdentity;
         transform = CGAffineTransformTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(modalFrame.origin.x+modalFrame.size.width/2), (originRect.origin.y+originRect.size.height/2)-(modalFrame.origin.y+modalFrame.size.height/2));
         
         transform = CGAffineTransformScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height);
         
         
+        [container sendSubviewToBack:modalOverlay];
         [container sendSubviewToBack:imageView1];
         
     
         
         self.webView.transform = transform;
         
-        self.webView.alpha = 0.01f;
+        self.webView.alpha = 0.5f;
         modalOverlay.alpha = 0.0f;
         
  
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        [self.webView setUserInteractionEnabled:NO];
         
     }
     if ([transitionType isEqualToString:@"zoomout"]) {
@@ -1449,6 +1457,7 @@ BOOL hasOrigin;
         transform = CATransform3DScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height, 1);
         
         
+        [container sendSubviewToBack:modalOverlay];
         [container sendSubviewToBack:self.webView];
         
         [self.webView stringByEvaluatingJavaScriptFromString:@"NativeNav.testTiming('before callback')"];
@@ -1460,7 +1469,7 @@ BOOL hasOrigin;
         
         self.webView.alpha = 1;
         
-        modalOverlay.alpha = 0.0f;
+        modalOverlay.alpha = 0.3f;
         
         
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
@@ -1494,6 +1503,7 @@ BOOL hasOrigin;
     
     UIView* container = self.webView.superview;
     
+    
     if ([transitionType isEqualToString:@"popup"]) {
         
         
@@ -1503,7 +1513,7 @@ BOOL hasOrigin;
         self.webView.alpha = 1.0f;
         imageView1.alpha = 1.0f;
         
-        modalOverlay.alpha = 0.5f;
+        modalOverlay.alpha = 0.3f;
         
         self.webView.layer.transform = CATransform3DIdentity;
         
@@ -1545,7 +1555,7 @@ BOOL hasOrigin;
         self.webView.alpha = 1.0f;
         imageView1.alpha = 1.0f;
         
-        modalOverlay.alpha = 0.5f;
+        modalOverlay.alpha = 0.3f;
         
         self.webView.transform = CGAffineTransformIdentity;
         
@@ -1583,7 +1593,7 @@ BOOL hasOrigin;
         self.webView.alpha = 1.0f;
         imageView1.alpha = 1.0f;
         
-        modalOverlay.alpha = 0.5f;
+        modalOverlay.alpha = 0.3f;
         
         self.webView.transform = CGAffineTransformIdentity;
         
@@ -1622,10 +1632,14 @@ BOOL hasOrigin;
                          animations:^{
                              self.webView.alpha = 1.0f;
                              self.webView.transform = CGAffineTransformIdentity;
+  modalOverlay.alpha = 0.3f;
                          }
                          completion:^(BOOL finished){
                              imageView1.image = nil;
                              imageView1.alpha = 0;
+                           modalOverlay.alpha = 0.0f;
+                             [self.webView setUserInteractionEnabled:YES];
+
                          }];
         
     }
@@ -1643,7 +1657,7 @@ BOOL hasOrigin;
                             options:UIViewAnimationOptionCurveEaseIn
                          animations:^{
                              imageView1.alpha = 0.0f;
-                             
+                             modalOverlay.alpha = 0;
                              imageView1.layer.transform = transform;
                          }
                          completion:^(BOOL finished){
@@ -1656,11 +1670,20 @@ BOOL hasOrigin;
     
     else if ([transitionType isEqualToString:@"crossfade"]) {
         
-               [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.5f];
-        self.webView.alpha = 1.0f;
-        imageView1.alpha = 1.0f;
-        [UIView commitAnimations];
+        
+        [UIView animateWithDuration:0.3
+                              delay:0.0
+                            options:UIViewAnimationOptionCurveEaseIn
+                         animations:^{
+                             self.webView.alpha = 1.0f;
+                             imageView1.alpha = 1.0f;
+                         }
+                         completion:^(BOOL finished){
+                             imageView1.image = nil;
+                             imageView1.alpha = 0;
+                             [self.webView endEditing:YES];
+                         }];
+        
         
     }
     else {
