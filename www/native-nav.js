@@ -38,7 +38,19 @@
 
         nn.startNativeTransition = function(transitionType, originRect, callback, closeCallback) {
             _closeCallback = closeCallback;
-            exec(callback, null, "NativeNav", "startNativeTransition", [transitionType, originRect]);
+            exec(
+                function() {
+                    console.log("during callback");
+                    callback();
+                }, null, "NativeNav", "startNativeTransition", [transitionType, originRect]);
+        };
+
+        nn.finishNativeTransition = function() {
+            exec(null, null, "NativeNav", "finishNativeTransition", []);
+        };
+
+        nn.testTiming = function(msg) {
+            console.log(msg);
         };
 
 

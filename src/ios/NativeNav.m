@@ -1125,12 +1125,17 @@ UIImageView* imageView1; // always full screen
 UIImageView* imageView2; // used for a closing modal
 UIView* modalOverlay;
 UIEdgeInsets originalInsets;
+NSString* transitionType;
+CGRect originRect;
+CGRect targetRect;
+BOOL hasOrigin;
 
 - (void)handleModalOverlayTap:(UIView*)sender
 {
     [self.commandDelegate evalJs:[NSString stringWithFormat:@"NativeNav.closeModal();"]];
 }
 
+// place the views for the beginning of a transition then send callback so the webview can be redrawn
 - (void) startNativeTransition:(CDVInvokedUrlCommand*)command
 {
     // todo: put this somewhere better
@@ -1138,18 +1143,15 @@ UIEdgeInsets originalInsets;
     [self.webView resignFirstResponder];
     UIView* container = self.webView.superview;
     
-    NSString* transitionType =[command.arguments objectAtIndex:0];
+    transitionType =[command.arguments objectAtIndex:0];
     NSDictionary* ord =[command.arguments objectAtIndex:1];
-    CGRect originRect;
-    BOOL hasOrigin = NO;
+    
+    hasOrigin = NO;
     
     if (![ord isEqual:[NSNull null]]) {
         originRect = CGRectMake([(NSNumber*)ord[@"left"] floatValue], [(NSNumber*)ord[@"top"] floatValue], [(NSNumber*)ord[@"width"] floatValue], [(NSNumber*)ord[@"height"] floatValue]);
         hasOrigin = YES;
     }
-    
-    
-    UIView* capturedView;
     
     
     if (!imageView1) {
@@ -1225,8 +1227,7 @@ UIEdgeInsets originalInsets;
         [container bringSubviewToFront:self.webView];
         
 
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
+       
             self.webView.frame = modalFrame;
         
         
@@ -1241,18 +1242,7 @@ UIEdgeInsets originalInsets;
         
         [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
         
-    
-        
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.3f];
-        self.webView.alpha = 1.0f;
-        imageView1.alpha = 1.0f;
-        
-        modalOverlay.alpha = 0.5f;
-        
-        layer.transform = CATransform3DIdentity;
-        
-        [UIView commitAnimations];
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
     }
     
@@ -1276,13 +1266,6 @@ UIEdgeInsets originalInsets;
             originRect = CGRectMake(targetRect.origin.x, self.webView.superview.bounds.size.height, targetRect.size.width, targetRect.size.height);
         }
         
-        CATransform3D transform = CATransform3DIdentity;
-        
-        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(targetRect.origin.x+targetRect.size.width/2), (originRect.origin.y+originRect.size.height/2)-(targetRect.origin.y+targetRect.size.height/2), 0);
-        
-        transform = CATransform3DScale(transform, originRect.size.width/targetRect.size.width, originRect.size.height/targetRect.size.height, 1);
-        
-        
         
         
         
@@ -1293,27 +1276,13 @@ UIEdgeInsets originalInsets;
         imageView2.layer.transform = CATransform3DIdentity;
         [self.webView.scrollView setContentInset:originalInsets];
         
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
+  
         self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
         
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
         
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.3f];
-        
-        
-        imageView2.layer.transform = transform;
-        
-        
-        
-        imageView2.alpha = 0.0f;
-        imageView1.alpha = 0.0f;
-        modalOverlay.alpha = 0.0f;
-        
-        
-        
-        [UIView commitAnimations];
+     
     }
     
     else if ([transitionType isEqualToString:@"showrightpanel"]) {
@@ -1334,7 +1303,6 @@ UIEdgeInsets originalInsets;
         [container bringSubviewToFront:self.webView];
         
         
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
         self.webView.frame = modalFrame;
         
@@ -1346,19 +1314,10 @@ UIEdgeInsets originalInsets;
         
         
         [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
+       
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
-        
-        
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.3f];
-        self.webView.alpha = 1.0f;
-        imageView1.alpha = 1.0f;
-        
-        modalOverlay.alpha = 0.5f;
-        
-        self.webView.transform = CGAffineTransformIdentity;
-        
-        [UIView commitAnimations];
+    
         
     }
     else if ([transitionType isEqualToString:@"hiderightpanel"]) {
@@ -1377,15 +1336,230 @@ UIEdgeInsets originalInsets;
         
         [self.webView.scrollView setContentInset:originalInsets];
         
+  
+        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+        
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
+    }
+    
+    
+    else if ([transitionType isEqualToString:@"showleftpanel"]) {
+        
+        originalInsets = self.webView.scrollView.contentInset;
+        originalFrame = self.webView.bounds;
+        modalFrame = CGRectMake(0, 0, 260, container.bounds.size.height);
+        
+        [self replaceAllWithImage];
+        
+        CGAffineTransform transform = CGAffineTransformMakeTranslation(-260, 0);
+        
+        self.webView.alpha = 1.0f;
+        [container bringSubviewToFront:self.webView];
+        
+ 
+        self.webView.frame = modalFrame;
+        
+        self.webView.transform = transform;
+        
+        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
+        
+        self.webView.alpha = 0.0f;
+        
+        
+        [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+
+        
+    }
+    else if ([transitionType isEqualToString:@"hideleftpanel"]) {
+        
+        
+        [self replaceModalWebViewWithImage];
+        
+        
+        
+        
+        self.webView.alpha = 1.0f;
+        [self.webView.superview sendSubviewToBack:self.webView];
+        self.webView.frame = self.webView.superview.bounds;
+        imageView2.transform = CGAffineTransformIdentity;
+        
+        [self.webView.scrollView setContentInset:originalInsets];
+        
+
         self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+   
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+    }
+    if ([transitionType isEqualToString:@"zoomin"]) {
+        
+        
+        originalInsets = self.webView.scrollView.contentInset;
+        originalFrame = self.webView.bounds;
+            modalFrame = self.webView.bounds;
+
+        imageView1.transform = CGAffineTransformIdentity;
+
+        [self replaceOriginalWebViewWithImage];
+        
+        if (!hasOrigin) {
+            originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
+        }
+        
+        CGAffineTransform transform = CGAffineTransformIdentity;
+        transform = CGAffineTransformTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(modalFrame.origin.x+modalFrame.size.width/2), (originRect.origin.y+originRect.size.height/2)-(modalFrame.origin.y+modalFrame.size.height/2));
+        
+        transform = CGAffineTransformScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height);
+        
+        
+        [container sendSubviewToBack:imageView1];
+        
+    
+        
+        self.webView.transform = transform;
+        
+        self.webView.alpha = 0.01f;
+        modalOverlay.alpha = 0.0f;
+        
+ 
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+    }
+    if ([transitionType isEqualToString:@"zoomout"]) {
+        
+        
+        originalInsets = self.webView.scrollView.contentInset;
+        originalFrame = self.webView.bounds;
+        modalFrame = self.webView.bounds;
+        imageView1.layer.transform = CATransform3DIdentity;
+
+        [self replaceOriginalWebViewWithImage];
+        
+        if (!hasOrigin) {
+            originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
+        }
+        
+        CATransform3D transform = CATransform3DIdentity;
+        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(modalFrame.origin.x+modalFrame.size.width/2), (originRect.origin.y+originRect.size.height/2)-(modalFrame.origin.y+modalFrame.size.height/2), 0);
+        
+        transform = CATransform3DScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height, 1);
+        
+        
+        [container sendSubviewToBack:self.webView];
+        
+        [self.webView stringByEvaluatingJavaScriptFromString:@"NativeNav.testTiming('before callback')"];
+   
+        [self.webView stringByEvaluatingJavaScriptFromString:@"NativeNav.testTiming('after callback')"];
+        
+        
+        imageView1.layer.transform = CATransform3DIdentity;
+        
+        self.webView.alpha = 1;
+        
+        modalOverlay.alpha = 0.0f;
+        
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+
+        
+    }
+
+    else if ([transitionType isEqualToString:@"crossfade"]) {
+
+        originalFrame = self.webView.bounds;
+ 
+        [self replaceOriginalWebViewWithImage];
+        modalOverlay.alpha = 0.0f;
+
+        
+        self.webView.alpha = 0.0f;
+        [self.webView.superview sendSubviewToBack:imageView1];
+        
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+    }
+    else {
+        // invalid transition - don't do anything
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
+        
+    }
+}
+
+- (void) finishNativeTransition:(CDVInvokedUrlCommand*)command
+{
+    
+    UIView* container = self.webView.superview;
+    
+    if ([transitionType isEqualToString:@"popup"]) {
+        
+        
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        self.webView.alpha = 1.0f;
+        imageView1.alpha = 1.0f;
+        
+        modalOverlay.alpha = 0.5f;
+        
+        self.webView.layer.transform = CATransform3DIdentity;
+        
+        [UIView commitAnimations];
+        
+    }
+    
+    else if ([transitionType isEqualToString:@"closepopup"]) {
+        
+
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        
+        
+        CATransform3D transform = CATransform3DIdentity;
+        
+        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(targetRect.origin.x+targetRect.size.width/2), (originRect.origin.y+originRect.size.height/2)-(targetRect.origin.y+targetRect.size.height/2), 0);
+        
+        transform = CATransform3DScale(transform, originRect.size.width/targetRect.size.width, originRect.size.height/targetRect.size.height, 1);
+        
+
+        imageView2.layer.transform = transform;
+        
+        
+        
+        imageView2.alpha = 0.0f;
+        imageView1.alpha = 0.0f;
+        modalOverlay.alpha = 0.0f;
+        
+        
+        [UIView commitAnimations];
+    }
+    
+    else if ([transitionType isEqualToString:@"showrightpanel"]) {
+        
+        
+        [UIView beginAnimations:nil context:NULL];
+        [UIView setAnimationDuration:0.3f];
+        self.webView.alpha = 1.0f;
+        imageView1.alpha = 1.0f;
+        
+        modalOverlay.alpha = 0.5f;
+        
+        self.webView.transform = CGAffineTransformIdentity;
+        
+        [UIView commitAnimations];
+        
+    }
+    else if ([transitionType isEqualToString:@"hiderightpanel"]) {
         
         
         
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.3f];
         
+        CGAffineTransform transform = CGAffineTransformMakeTranslation(260, 0);
         
         imageView2.transform = transform;
         
@@ -1403,32 +1577,6 @@ UIEdgeInsets originalInsets;
     
     else if ([transitionType isEqualToString:@"showleftpanel"]) {
         
-        originalInsets = self.webView.scrollView.contentInset;
-        originalFrame = self.webView.bounds;
-        modalFrame = CGRectMake(0, 0, 260, container.bounds.size.height);
-        
-        [self replaceAllWithImage];
-        
-        CGAffineTransform transform = CGAffineTransformMakeTranslation(-260, 0);
-        
-        self.webView.alpha = 1.0f;
-        [container bringSubviewToFront:self.webView];
-        
-        
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
-        self.webView.frame = modalFrame;
-        
-        self.webView.transform = transform;
-        
-        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
-        
-        self.webView.alpha = 0.0f;
-        
-        
-        [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
-        
-        
         
         [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.3f];
@@ -1444,24 +1592,9 @@ UIEdgeInsets originalInsets;
     }
     else if ([transitionType isEqualToString:@"hideleftpanel"]) {
         
-        
-        [self replaceModalWebViewWithImage];
-        
+
         
         CGAffineTransform transform = CGAffineTransformMakeTranslation(-260, 0);
-        
-        
-        self.webView.alpha = 1.0f;
-        [self.webView.superview sendSubviewToBack:self.webView];
-        self.webView.frame = self.webView.superview.bounds;
-        imageView2.transform = CGAffineTransformIdentity;
-        
-        [self.webView.scrollView setContentInset:originalInsets];
-        
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
-        self.webView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
-        
         
         
         [UIView beginAnimations:nil context:NULL];
@@ -1483,101 +1616,47 @@ UIEdgeInsets originalInsets;
     if ([transitionType isEqualToString:@"zoomin"]) {
         
         
-        originalInsets = self.webView.scrollView.contentInset;
-        originalFrame = self.webView.bounds;
-            modalFrame = self.webView.bounds;
-
-        imageView1.layer.transform = CATransform3DIdentity;
-
-        [self replaceOriginalWebViewWithImage];
-        
-        if (!hasOrigin) {
-            originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
-        }
-        
-        CATransform3D transform = CATransform3DIdentity;
-        transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(modalFrame.origin.x+modalFrame.size.width/2), (originRect.origin.y+originRect.size.height/2)-(modalFrame.origin.y+modalFrame.size.height/2), 0);
-        
-        transform = CATransform3DScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height, 1);
-        
-        
-        [container sendSubviewToBack:imageView1];
-        
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
-        
-        self.webView.layer.transform = transform;
-        
-        self.webView.alpha = 0.0f;
-        
-        modalOverlay.alpha = 0.0f;
-        
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.3f];
-        self.webView.alpha = 1.0f;
-        imageView1.alpha = 1.0f;
-        
-        self.webView.layer.transform = CATransform3DIdentity;
-        
-        [UIView commitAnimations];
+        [UIView animateWithDuration:0.3
+                              delay:0.0
+                            options:UIViewAnimationOptionCurveEaseIn
+                         animations:^{
+                             self.webView.alpha = 1.0f;
+                             self.webView.transform = CGAffineTransformIdentity;
+                         }
+                         completion:^(BOOL finished){
+                             imageView1.image = nil;
+                             imageView1.alpha = 0;
+                         }];
         
     }
     if ([transitionType isEqualToString:@"zoomout"]) {
-        
-        
-        originalInsets = self.webView.scrollView.contentInset;
-        originalFrame = self.webView.bounds;
-        modalFrame = self.webView.bounds;
-        
-        [self replaceOriginalWebViewWithImage];
-        
-        if (!hasOrigin) {
-            originRect = CGRectMake(modalFrame.origin.x, originalFrame.size.height, modalFrame.size.width, modalFrame.size.height);
-        }
+    
         
         CATransform3D transform = CATransform3DIdentity;
         transform = CATransform3DTranslate(transform, (originRect.origin.x+originRect.size.width/2)-(modalFrame.origin.x+modalFrame.size.width/2), (originRect.origin.y+originRect.size.height/2)-(modalFrame.origin.y+modalFrame.size.height/2), 0);
         
         transform = CATransform3DScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height, 1);
         
-        
-        [container sendSubviewToBack:self.webView];
-        
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
-        
-        imageView1.layer.transform = CATransform3DIdentity;
-        
-        self.webView.alpha = 0.0f;
-        
-        modalOverlay.alpha = 0.0f;
-        
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.3f];
-        self.webView.alpha = 1.0f;
-        imageView1.alpha = 0.0f;
-        
-        imageView1.layer.transform = transform;
 
+        [UIView animateWithDuration:0.3
+                              delay:0.0
+                            options:UIViewAnimationOptionCurveEaseIn
+                         animations:^{
+                             imageView1.alpha = 0.0f;
+                             
+                             imageView1.layer.transform = transform;
+                         }
+                         completion:^(BOOL finished){
+                             imageView1.image = nil;
+                             imageView1.alpha = 0;
+                         }];
         
-        [UIView commitAnimations];
         
     }
-
+    
     else if ([transitionType isEqualToString:@"crossfade"]) {
-
-        originalFrame = self.webView.bounds;
- 
-        [self replaceOriginalWebViewWithImage];
-        modalOverlay.alpha = 0.0f;
-
         
-        self.webView.alpha = 0.0f;
-        [self.webView.superview sendSubviewToBack:imageView1];
-        
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
-        [UIView beginAnimations:nil context:NULL];
+               [UIView beginAnimations:nil context:NULL];
         [UIView setAnimationDuration:0.5f];
         self.webView.alpha = 1.0f;
         imageView1.alpha = 1.0f;
@@ -1586,13 +1665,9 @@ UIEdgeInsets originalInsets;
     }
     else {
         // invalid transition - don't do anything
-        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
-    }
-    
-    
+          }
+
     
 }
-
 
 @end
