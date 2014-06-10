@@ -1266,7 +1266,6 @@ BOOL hasOrigin;
         [self replaceModalWebViewWithImage];
         
         
-        CGRect targetRect;
         targetRect = self.webView.frame;
         
         if (!hasOrigin) {
@@ -1429,7 +1428,7 @@ BOOL hasOrigin;
         
         self.webView.transform = transform;
         
-        self.webView.alpha = 0.5f;
+        self.webView.alpha = 0.0f;
         modalOverlay.alpha = 0.0f;
         
  
@@ -1625,12 +1624,22 @@ BOOL hasOrigin;
     }
     if ([transitionType isEqualToString:@"zoomin"]) {
         
+       
+        [UIView animateWithDuration:0.1
+                              delay:0.0
+                            options:UIViewAnimationOptionCurveEaseIn
+                         animations:^{
+                             self.webView.alpha = 1.0f;
+                         }
+                         completion:^(BOOL finished){
+                         }];
+
         
         [UIView animateWithDuration:0.3
                               delay:0.0
                             options:UIViewAnimationOptionCurveEaseIn
                          animations:^{
-                             self.webView.alpha = 1.0f;
+                         //    self.webView.alpha = 1.0f;
                              self.webView.transform = CGAffineTransformIdentity;
   modalOverlay.alpha = 0.3f;
                          }
@@ -1651,12 +1660,20 @@ BOOL hasOrigin;
         
         transform = CATransform3DScale(transform, originRect.size.width/modalFrame.size.width, originRect.size.height/modalFrame.size.height, 1);
         
-
+        [UIView animateWithDuration:0.1
+                              delay:0.2
+                            options:UIViewAnimationOptionCurveEaseIn
+                         animations:^{
+                             imageView1.alpha = 0.0f;
+                         }
+                         completion:^(BOOL finished){
+                         }];
+        
         [UIView animateWithDuration:0.3
                               delay:0.0
                             options:UIViewAnimationOptionCurveEaseIn
                          animations:^{
-                             imageView1.alpha = 0.0f;
+                             
                              modalOverlay.alpha = 0;
                              imageView1.layer.transform = transform;
                          }
