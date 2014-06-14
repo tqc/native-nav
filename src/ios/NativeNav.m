@@ -66,6 +66,8 @@
     
     
     [self initGestureRecognizers];
+ 
+
     
 }
 
@@ -1059,13 +1061,32 @@ CGRect modalFrame;
     UIView* capturedView=self.webView;
     UIView* container = self.webView.superview;
     
+    if (imageView1) {
+        [imageView1 removeFromSuperview];
+        imageView1 = nil;
+    }
+    
+    
+    if ([capturedView respondsToSelector:@selector(snapshotViewAfterScreenUpdates:)]) {
+        imageView1 = [capturedView snapshotViewAfterScreenUpdates:NO];
+        [container addSubview:imageView1];
+    }
+    else {
+        imageView1 = [[UIImageView alloc] initWithFrame:self.webView.frame];
+        imageView1.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+        [container addSubview:imageView1];
+        imageView1.alpha = 0.0f;
+        
+
+    
     UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
     [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
     UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     
+    [(UIImageView*)imageView1 setImage: viewImage];
+    }
     [imageView1 setFrame:originalFrame];
-    [imageView1 setImage: viewImage];
     
     imageView1.alpha = 1.0f;
     
@@ -1079,13 +1100,35 @@ CGRect modalFrame;
     UIView* capturedView=self.webView.superview;
     UIView* container = self.webView.superview;
 
+    if (imageView1) {
+        [imageView1 removeFromSuperview];
+        imageView1 = nil;
+    }
+
+    
+    if ([capturedView respondsToSelector:@selector(snapshotViewAfterScreenUpdates:)]) {
+        imageView1 = [capturedView snapshotViewAfterScreenUpdates:NO];
+        [container addSubview:imageView1];
+   }
+    else {
+        imageView1 = [[UIImageView alloc] initWithFrame:self.webView.frame];
+        imageView1.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+        [container addSubview:imageView1];
+        imageView1.alpha = 0.0f;
+    
+    
     UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
-    [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetInterpolationQuality(context, kCGInterpolationNone);
+    [capturedView.layer renderInContext:context];
+    
     UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     
+    [(UIImageView*)imageView1 setImage: viewImage];
+    }
+
     [imageView1 setFrame:originalFrame];
-    [imageView1 setImage: viewImage];
     
     imageView1.alpha = 1.0f;
     [container bringSubviewToFront:imageView1];
@@ -1093,6 +1136,7 @@ CGRect modalFrame;
     modalOverlay.alpha = 0.0f;
     modalOverlay.backgroundColor = [UIColor blackColor];
     [container bringSubviewToFront:modalOverlay];
+    
 }
 
 
@@ -1101,19 +1145,41 @@ CGRect modalFrame;
 
     UIView* capturedView=self.webView;
     UIView* container = self.webView.superview;
+    if (imageView2) {
+        [imageView2 removeFromSuperview];
+        imageView2 = nil;
+    }
+    
+    
+    if ([capturedView respondsToSelector:@selector(snapshotViewAfterScreenUpdates:)]) {
+        imageView2 = [capturedView snapshotViewAfterScreenUpdates:NO];
+        [container addSubview:imageView2];
+    }
+    else {
+    imageView2 = [[UIImageView alloc] initWithFrame:self.webView.frame];
+    imageView2.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
+    [container addSubview:imageView2];
+    imageView2.alpha = 0.0f;
     
     UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
-    [capturedView.layer renderInContext:UIGraphicsGetCurrentContext()];
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetInterpolationQuality(context, kCGInterpolationNone);
+    
+    if ([capturedView respondsToSelector:@selector(drawViewHierarchyInRect:afterScreenUpdates:)]) {
+        [capturedView drawViewHierarchyInRect:capturedView.bounds afterScreenUpdates:YES];
+    } else {
+        [capturedView.layer renderInContext:context];
+    }
     UIImage *viewImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
-    
-
+        [(UIImageView*)imageView2 setImage: viewImage];
+        
+    }
     imageView2.alpha = 1.0f;
     imageView2.layer.transform = CATransform3DIdentity;
     
-    
+   
     [imageView2 setFrame:self.webView.frame];
-    [imageView2 setImage: viewImage];
     
     [container bringSubviewToFront:imageView2];
 }
@@ -1121,8 +1187,8 @@ CGRect modalFrame;
 
 
 
-UIImageView* imageView1; // always full screen
-UIImageView* imageView2; // used for a closing modal
+UIView* imageView1; // always full screen
+UIView* imageView2; // used for a closing modal
 UIView* modalOverlay;
 UIEdgeInsets originalInsets;
 NSString* transitionType;
@@ -1138,6 +1204,7 @@ BOOL hasOrigin;
 // place the views for the beginning of a transition then send callback so the webview can be redrawn
 - (void) startNativeTransition:(CDVInvokedUrlCommand*)command
 {
+
     // todo: put this somewhere better
     self.webView.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.957 alpha:1]; /*#efeff4*/
     [self.webView endEditing:YES];
@@ -1159,20 +1226,7 @@ BOOL hasOrigin;
         hasOrigin = YES;
     }
     
-    
-    if (!imageView1) {
-        imageView1 = [[UIImageView alloc] initWithFrame:self.webView.frame];
-        imageView1.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
-        
-        [container addSubview:imageView1];
-        imageView1.alpha = 0.0f;
-    }
-    if (!imageView2) {
-        imageView2 = [[UIImageView alloc] initWithFrame:self.webView.frame];
-        imageView2.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
-        [container addSubview:imageView2];
-        imageView2.alpha = 0.0f;
-    }
+
     
     if (!modalOverlay) {
         modalOverlay = [[UIView alloc] initWithFrame:self.webView.frame];
@@ -1644,8 +1698,8 @@ BOOL hasOrigin;
   modalOverlay.alpha = 0.3f;
                          }
                          completion:^(BOOL finished){
-                             imageView1.image = nil;
-                             imageView1.alpha = 0;
+                             [imageView1 removeFromSuperview];
+                             imageView1 = nil;
                            modalOverlay.alpha = 0.0f;
                              [self.webView setUserInteractionEnabled:YES];
 
@@ -1678,8 +1732,8 @@ BOOL hasOrigin;
                              imageView1.layer.transform = transform;
                          }
                          completion:^(BOOL finished){
-                             imageView1.image = nil;
-                             imageView1.alpha = 0;
+                             [imageView1 removeFromSuperview];
+                             imageView1 = nil;
                          }];
         
         
@@ -1696,8 +1750,8 @@ BOOL hasOrigin;
                              imageView1.alpha = 1.0f;
                          }
                          completion:^(BOOL finished){
-                             imageView1.image = nil;
-                             imageView1.alpha = 0;
+                             [imageView1 removeFromSuperview];
+                             imageView1 = nil;
                              [self.webView endEditing:YES];
                          }];
         
