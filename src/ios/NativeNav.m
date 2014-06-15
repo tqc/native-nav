@@ -1069,12 +1069,12 @@ CGRect modalFrame;
     
     if ([capturedView respondsToSelector:@selector(snapshotViewAfterScreenUpdates:)]) {
         imageView1 = [capturedView snapshotViewAfterScreenUpdates:NO];
-        [container addSubview:imageView1];
+        [container insertSubview:imageView1 aboveSubview:self.webView];
     }
     else {
         imageView1 = [[UIImageView alloc] initWithFrame:self.webView.frame];
         imageView1.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
-        [container addSubview:imageView1];
+        [container insertSubview:imageView1 aboveSubview:self.webView];
         imageView1.alpha = 0.0f;
         
 
@@ -1092,7 +1092,8 @@ CGRect modalFrame;
     
     modalOverlay.alpha = 0.0f;
     modalOverlay.backgroundColor = [UIColor blackColor];
-    [container sendSubviewToBack:self.webView];
+    [container bringSubviewToFront:modalOverlay];
+
 }
 
 - (void)replaceAllWithImage {
@@ -1131,7 +1132,6 @@ CGRect modalFrame;
     [imageView1 setFrame:originalFrame];
     
     imageView1.alpha = 1.0f;
-    [container bringSubviewToFront:imageView1];
     
     modalOverlay.alpha = 0.0f;
     modalOverlay.backgroundColor = [UIColor blackColor];
@@ -1153,12 +1153,13 @@ CGRect modalFrame;
     
     if ([capturedView respondsToSelector:@selector(snapshotViewAfterScreenUpdates:)]) {
         imageView2 = [capturedView snapshotViewAfterScreenUpdates:NO];
-        [container addSubview:imageView2];
+        [container insertSubview:imageView2 aboveSubview:self.webView];
+        
     }
     else {
     imageView2 = [[UIImageView alloc] initWithFrame:self.webView.frame];
     imageView2.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);
-    [container addSubview:imageView2];
+    [container insertSubview:imageView2 aboveSubview:self.webView];
     imageView2.alpha = 0.0f;
     
     UIGraphicsBeginImageContextWithOptions(capturedView.bounds.size, YES, 0.0f);
@@ -1181,7 +1182,6 @@ CGRect modalFrame;
    
     [imageView2 setFrame:self.webView.frame];
     
-    [container bringSubviewToFront:imageView2];
 }
 
 
@@ -1304,7 +1304,7 @@ BOOL hasOrigin;
         [self.webView.scrollView setContentInset:UIEdgeInsetsMake(0, 0,0, 0)];
         
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
-        
+            [self.webView setUserInteractionEnabled:NO];
     }
     
     else if ([transitionType isEqualToString:@"closepopup"]) {
@@ -1331,6 +1331,8 @@ BOOL hasOrigin;
         
         [self.webView.superview bringSubviewToFront:imageView2];
         self.webView.alpha = 1.0f;
+//        [self.webView.superview sendSubviewToBack:modalOverlay];
+        [self.webView.superview sendSubviewToBack:imageView1];
         [self.webView.superview sendSubviewToBack:self.webView];
         self.webView.frame = self.webView.superview.bounds;
         imageView2.layer.transform = CATransform3DIdentity;
@@ -1341,7 +1343,7 @@ BOOL hasOrigin;
         
         [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:transitionType] callbackId:command.callbackId];
         
-        
+            [self.webView setUserInteractionEnabled:NO];
      
     }
     
@@ -1561,25 +1563,29 @@ BOOL hasOrigin;
         
         
         
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.3f];
-        self.webView.alpha = 1.0f;
-        imageView1.alpha = 1.0f;
-        
-        modalOverlay.alpha = 0.3f;
-        
-        self.webView.layer.transform = CATransform3DIdentity;
-        
-        [UIView commitAnimations];
+        [UIView animateWithDuration:0.3
+                              delay:0.0
+                            options:UIViewAnimationOptionCurveEaseIn
+                         animations:^{
+                             self.webView.alpha = 1.0f;
+                             imageView1.alpha = 1.0f;
+                             
+                             modalOverlay.alpha = 0.3f;
+                             
+                             self.webView.layer.transform = CATransform3DIdentity;
+                             
+                         }
+                         completion:^(BOOL finished){
+                                                       [self.webView setUserInteractionEnabled:YES];
+                             
+                         }];
+
         
     }
     
     else if ([transitionType isEqualToString:@"closepopup"]) {
         
 
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.3f];
-        
         
         CATransform3D transform = CATransform3DIdentity;
         
@@ -1587,17 +1593,48 @@ BOOL hasOrigin;
         
         transform = CATransform3DScale(transform, originRect.size.width/targetRect.size.width, originRect.size.height/targetRect.size.height, 1);
         
+        [self.webView setNeedsDisplay];
+        
 
-        imageView2.layer.transform = transform;
+        
+        [UIView animateWithDuration:0.3
+                              delay:0.0
+                            options:UIViewAnimationOptionCurveEaseIn
+                         animations:^{
+                             
+                             imageView2.layer.transform = transform;
+                             
+                             
+                             imageView2.alpha = 0.0f;
+                             modalOverlay.alpha = 0.0f;
+                             
+                         }
+                         completion:^(BOOL finished){
+
+                             [imageView2 removeFromSuperview];
+                             imageView2 = nil;
+//                             [self.webView setUserInteractionEnabled:YES];
+                             
+                         }];
+
+        [UIView animateWithDuration:0.1
+                              delay:0.3
+                            options:UIViewAnimationOptionCurveEaseIn
+                         animations:^{
+                             
+                             imageView1.alpha = 0.0f;
+                             
+                         }
+                         completion:^(BOOL finished){
+                             [imageView1 removeFromSuperview];
+                             imageView1 = nil;
+                             
+                             [self.webView setUserInteractionEnabled:YES];
+                             
+                         }];
+
         
         
-        
-        imageView2.alpha = 0.0f;
-        imageView1.alpha = 0.0f;
-        modalOverlay.alpha = 0.0f;
-        
-        
-        [UIView commitAnimations];
     }
     
     else if ([transitionType isEqualToString:@"showrightpanel"]) {
