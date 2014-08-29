@@ -1553,6 +1553,46 @@ BOOL hasOrigin;
     }
 }
 
+- (void) enablePagination:(CDVInvokedUrlCommand*)command
+{
+    self.webView.paginationMode = UIWebPaginationModeLeftToRight;
+    self.webView.paginationBreakingMode = UIWebPaginationBreakingModePage;
+    self.webView.gapBetweenPages = 0;
+    
+    UIScrollView* scrollView = nil;
+    for (UIView *subView in [self.webView subviews]) {
+        if ([subView isKindOfClass:[UIScrollView class]]) {
+            scrollView = (UIScrollView*)subView;
+            scrollView.pagingEnabled = YES;
+            break;
+        }
+    }
+    
+    // todo: put this somewhere better
+    self.webView.backgroundColor = [UIColor whiteColor];
+    
+    
+}
+
+- (void) disablePagination:(CDVInvokedUrlCommand*)command
+{
+    self.webView.paginationMode = UIWebPaginationModeUnpaginated;
+
+    UIScrollView* scrollView = nil;
+    for (UIView *subView in [self.webView subviews]) {
+        if ([subView isKindOfClass:[UIScrollView class]]) {
+            scrollView = (UIScrollView*)subView;
+            scrollView.pagingEnabled = NO;
+            break;
+        }
+    }
+    
+    // todo: put this somewhere better
+    self.webView.backgroundColor = [UIColor colorWithRed:0.937 green:0.937 blue:0.957 alpha:1]; /*#efeff4*/
+    
+
+}
+
 - (void) finishNativeTransition:(CDVInvokedUrlCommand*)command
 {
     

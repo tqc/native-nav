@@ -49,6 +49,14 @@
             exec(null, null, "NativeNav", "finishNativeTransition", []);
         };
 
+        nn.enablePagination = function() {
+            exec(null, null, "NativeNav", "enablePagination", []);
+        };
+
+        nn.disablePagination = function() {
+            exec(null, null, "NativeNav", "disablePagination", []);
+        };
+
         nn.testTiming = function(msg) {
             console.log(msg);
         };
